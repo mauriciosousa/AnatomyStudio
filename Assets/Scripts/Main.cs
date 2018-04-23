@@ -15,10 +15,14 @@ public class Main : MonoBehaviour {
 
     private Slicer _slicer;
 
+    private ConfigProperties _config;
+
 	// Use this for initialization
 	void Start ()
     {
         _slicer = GetComponent<Slicer>();
+        _config = GetComponent<ConfigProperties>();
+        deviceType = _config.device;
     }
 	
 	// Update is called once per frame
