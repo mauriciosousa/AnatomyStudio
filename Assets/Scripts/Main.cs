@@ -15,10 +15,6 @@ public class Main : MonoBehaviour {
 
     private Slicer _slicer;
 
-    public bool editorCameraControl;
-    private Vector3 _perspectiveCameraPosition;
-    private Quaternion _perspectiveCameraOrientation;
-
 	// Use this for initialization
 	void Start ()
     {
@@ -31,23 +27,34 @@ public class Main : MonoBehaviour {
         // Setup camera
         if (deviceType == DeviceType.Tabletop)
         {
-            Camera.main.orthographic = false;
-            Camera.main.nearClipPlane = 0.0001f;
-            Camera.main.farClipPlane = 1000.0f;
-
-            if (!editorCameraControl)
-            {
-                Camera.main.transform.position = _perspectiveCameraPosition;
-                Camera.main.transform.rotation = _perspectiveCameraOrientation;
-            }
+            Camera.main.gameObject.GetComponent<FlyCamera>().enabled = false;
+            updatePerspectiveCamera();
         }
         else if(deviceType == DeviceType.Tablet)
         {
-            Camera.main.orthographic = true;
-            Camera.main.nearClipPlane = _slicer.slice - 0.5f;
-            Camera.main.farClipPlane = _slicer.slice + 0.5f;
-            Camera.main.transform.position = new Vector3(0, 1, -10);
-            Camera.main.transform.rotation = Quaternion.identity;
+            Camera.main.gameObject.GetComponent<FlyCamera>().enabled = false;
+            updateOrtographicCamera();
         }
+        else if(deviceType == DeviceType.Desktop)
+        {
+            Camera.main.gameObject.GetComponent<FlyCamera>().enabled = true;
+            updatePerspectiveCamera();
+        }
+    }
+
+    private void updateOrtographicCamera()
+    {
+        Camera.main.orthographic = true;
+        Camera.main.nearClipPlane = _slicer.slice - 0.5f;
+        Camera.main.farClipPlane = _slicer.slice + 0.5f;
+        Camera.main.transform.position = new Vector3(0, 1, -10);
+        Camera.main.transform.rotation = Quaternion.identity;
+    }
+
+    private void updatePerspectiveCamera()
+    {
+        Camera.main.orthographic = false;
+        Camera.main.nearClipPlane = 0.0001f;
+        Camera.main.farClipPlane = 1000.0f;
     }
 }

@@ -14,6 +14,8 @@ public class Draw : MonoBehaviour {
     private Vector3 _startingPoint;
     private bool _drawing;
 
+    private Main _main;
+
     // Structures buttons
     private int buttonWidth = 100;
     private int buttonHeight = 50;
@@ -31,6 +33,8 @@ public class Draw : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
+        _main = GetComponent<Main>();
+
         _slicer = GetComponent<Slicer>();
         _currentVolume = "none";
         _points = new Dictionary<string, List<Vector3>>();
@@ -47,53 +51,51 @@ public class Draw : MonoBehaviour {
         Vector3 mousePosition = mouseToWorld(Input.mousePosition);
 
         // draw
-        if (Input.GetMouseButtonDown(0))
+        if (_main.deviceType == DeviceType.Tablet)
         {
-            Vector3 mouseToGUI = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-
-            if (!(_slicer.SliderArea.Contains(mouseToGUI) ||
-                button1.Contains(mouseToGUI) || button2.Contains(mouseToGUI) || button3.Contains(mouseToGUI)))
+            if (Input.GetMouseButtonDown(0))
             {
-                if (_currentVolume != "none")
+                Vector3 mouseToGUI = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+
+                if (!(_slicer.SliderArea.Contains(mouseToGUI) ||
+                    button1.Contains(mouseToGUI) || button2.Contains(mouseToGUI) || button3.Contains(mouseToGUI)))
                 {
-                    startDrawing(mousePosition);
+                    if (_currentVolume != "none")
+                    {
+                        startDrawing(mousePosition);
+                    }
+                }
+            }
+            if (Input.GetMouseButton(0))
+            {
+                if (Drawing)
+                {
+                    updateDrawing(mousePosition);
+                }
+            }
+            if (Input.GetMouseButtonUp(0))
+            {
+                if (Drawing)
+                {
+                    endDrawing();
                 }
             }
         }
-        if(Input.GetMouseButton(0))
-        {
-            if (Drawing)
-            {
-                updateDrawing(mousePosition);
-            }
-        }
-        if (Input.GetMouseButtonUp(0))
-        {
-            if (Drawing)
-            {
-                endDrawing();
-            }
-        }
-
-        // select volume
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-            _currentVolume = "1";
-        else if (Input.GetKeyDown(KeyCode.Alpha2))
-            _currentVolume = "2";
-        else if (Input.GetKeyDown(KeyCode.Alpha3))
-            _currentVolume = "3";
     }
 
     void OnGUI()
     {
-        if (GUI.Button(button1, "Structure 1"))
-            _currentVolume = "1";
-        else if (GUI.Button(button2, "Structure 2"))
-            _currentVolume = "2";
-        else if (GUI.Button(button3, "Structure 3"))
-            _currentVolume = "3";
+        if (_main.deviceType == DeviceType.Tablet)
+        {
+            if (GUI.Button(button1, "Structure 1"))
+                _currentVolume = "1";
+            else if (GUI.Button(button2, "Structure 2"))
+                _currentVolume = "2";
+            else if (GUI.Button(button3, "Structure 3"))
+                _currentVolume = "3";
 
-        GUI.Label(new Rect(Screen.width - 150, Screen.height - buttonBorder - 25, 150, 25), "Current Structure: " + _currentVolume);
+            GUI.Label(new Rect(Screen.width - 150, Screen.height - buttonBorder - 25, 150, 25), "Current Structure: " + _currentVolume);
+        }
     }
 
     private void endDrawing()

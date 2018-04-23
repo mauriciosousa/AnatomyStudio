@@ -10,6 +10,8 @@ public class Slicer : MonoBehaviour {
     private int _slideBorder;
     private Rect _sliderArea;
 
+    private Main _main;
+
     public Rect SliderArea
     {
         get
@@ -23,6 +25,8 @@ public class Slicer : MonoBehaviour {
     {
         _slideBorder = 25;
         _sliderArea = new Rect(_slideBorder, _slideBorder, _slideBorder * 2.0f, Screen.height - _slideBorder * 2.0f);
+
+        _main = GetComponent<Main>();
     }
 	
 	// Update is called once per frame
@@ -40,8 +44,11 @@ public class Slicer : MonoBehaviour {
 
     void OnGUI()
     {
-        slice = Mathf.RoundToInt(GUI.VerticalSlider(_sliderArea, slice, 1.0F, 11.0F));
+        if (_main.deviceType == DeviceType.Tablet)
+        {
+            slice = Mathf.RoundToInt(GUI.VerticalSlider(_sliderArea, slice, 1.0F, 11.0F));
 
-        GUI.Label(new Rect(_slideBorder * 2.0f, Screen.height - _slideBorder * 2.0f, 100.0f, _slideBorder), "Slice no.: " + slice);
+            GUI.Label(new Rect(_slideBorder * 2.0f, Screen.height - _slideBorder * 2.0f, 100.0f, _slideBorder), "Slice no.: " + slice);
+        }
     }
 }
