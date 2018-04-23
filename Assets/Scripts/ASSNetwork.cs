@@ -19,11 +19,14 @@ public class ASSNetwork : MonoBehaviour {
 
     public bool showGUI = false;
 
+    private Draw _draw;
+
     void Start()
     {
         Application.runInBackground = true;
         _networkView = GetComponent<NetworkView>();
         _config = GameObject.Find("Main").GetComponent<ConfigProperties>();
+        _draw = GameObject.Find("Main").GetComponent<Draw>();
 
         port = _config.port;
         serverAddress = _config.address;
@@ -71,11 +74,11 @@ public class ASSNetwork : MonoBehaviour {
     [RPC]
     void RPC_broadcastLine(string userID, int slice, string structure, Vector3[] line)
     {
-
+        _draw.addLine(userID, slice, structure, line);
     }
     public void broadcastLine(string userID, int slice, string structure, Vector3[] line)
     {
-
+        _networkView.RPC("RPC_broadcastLine", RPCMode.Others, userID, slice, structure, line);
     }
 
 }

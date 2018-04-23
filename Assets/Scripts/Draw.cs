@@ -15,6 +15,7 @@ public class Draw : MonoBehaviour {
     private bool _drawing;
 
     private Main _main;
+    private ASSNetwork _assnetwork;
 
     // Structures buttons
     private int buttonWidth = 100;
@@ -34,6 +35,7 @@ public class Draw : MonoBehaviour {
     void Start ()
     {
         _main = GetComponent<Main>();
+        _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
 
         _slicer = GetComponent<Slicer>();
         _currentVolume = "none";
@@ -78,9 +80,52 @@ public class Draw : MonoBehaviour {
                 if (Drawing)
                 {
                     endDrawing();
+
+                    Vector3[] positions = new Vector3[_currentLine.positionCount];
+                    _currentLine.GetPositions(positions);
+                    _assnetwork.broadcastLine("", _slicer.slice, _currentVolume, positions);
                 }
             }
         }
+    }
+
+    internal void addLine(string userID, int slice, string structure, Vector3[] line)
+    {
+        // create line
+
+        GameObject parent = GameObject.Find(structure);
+        if (parent == null) parent = new GameObject(structure);
+
+        GameObject go = Instantiate(Resources.Load("Line", typeof(GameObject))) as GameObject;
+        go.transform.parent = parent.transform;
+
+        LineRenderer lr = go.GetComponent<LineRenderer>();
+        lr.material = Resources.Load("Materials/Line" + structure, typeof(Material)) as Material;
+
+        if (!_points.ContainsKey(structure)) _points[structure] = new List<Vector3>();
+
+        // add points
+
+        foreach(Vector3 p in line)
+        {
+            lr.SetPosition(lr.positionCount++, p);
+            _points[structure].Add(p);
+        }
+
+        // update volume (or structure)
+
+        if (!_points.ContainsKey(structure)) return;
+
+        string volumeName = "Volume " + structure;
+
+        GameObject volume = GameObject.Find(volumeName);
+        if (volume == null)
+        {
+            volume = Instantiate(Resources.Load("Volume", typeof(GameObject))) as GameObject;
+            volume.name = volumeName;
+            volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/Volume" + structure, typeof(Material)) as Material;
+        }
+        volume.GetComponent<MeshFilter>().mesh = CreateMesh(structure);
     }
 
     void OnGUI()
@@ -172,19 +217,19 @@ public class Draw : MonoBehaviour {
             volume.name = volumeName;
             volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/Volume" + _currentVolume, typeof(Material)) as Material;
         }
-        volume.GetComponent<MeshFilter>().mesh = CreateMesh();
+        volume.GetComponent<MeshFilter>().mesh = CreateMesh(_currentVolume);
     }
 
-    private Mesh CreateMesh()
+    private Mesh CreateMesh(String volume)
     {
         Mesh m = new Mesh();
         m.name = "ScriptedMesh";
         List<int> triangles = new List<int>();
 
-        double[][] vertices = new double[_points[_currentVolume].Count][];
+        double[][] vertices = new double[_points[volume].Count][];
 
         int i = 0;
-        foreach (Vector3 v in _points[_currentVolume])
+        foreach (Vector3 v in _points[volume])
             vertices[i++] = new double[3] { v.x, v.y, v.z };
 
         try
