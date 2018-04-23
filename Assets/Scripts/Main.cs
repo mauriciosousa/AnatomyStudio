@@ -19,10 +19,14 @@ public class Main : MonoBehaviour {
     private Vector3 _perspectiveCameraPosition;
     private Quaternion _perspectiveCameraOrientation;
 
+    private ConfigProperties _config;
+
 	// Use this for initialization
 	void Start ()
     {
         _slicer = GetComponent<Slicer>();
+        _config = GetComponent<ConfigProperties>();
+        deviceType = _config.device;
     }
 	
 	// Update is called once per frame
