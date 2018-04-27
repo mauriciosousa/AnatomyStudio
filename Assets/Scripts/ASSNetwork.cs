@@ -74,11 +74,12 @@ public class ASSNetwork : MonoBehaviour {
     [RPC]
     void RPC_broadcastLine(string userID, int slice, string structure, Vector3[] line)
     {
-        _draw.addLine(userID, slice, structure, line);
+        _draw.AddLine(userID, slice, structure, line);
     }
     public void broadcastLine(string userID, int slice, string structure, Vector3[] line)
     {
-        _networkView.RPC("RPC_broadcastLine", RPCMode.Others, userID, slice, structure, line);
+        if(Network.peerType != NetworkPeerType.Disconnected)
+            _networkView.RPC("RPC_broadcastLine", RPCMode.Others, userID, slice, structure, line);
     }
 
 }

@@ -23,6 +23,8 @@ public class Draw : MonoBehaviour {
     private int buttonBorder = 25;
     private Rect button1, button2, button3;
 
+    public Transform tabletop;
+
     public bool Drawing
     {
         get
@@ -50,7 +52,7 @@ public class Draw : MonoBehaviour {
 	// Update is called once per frame
 	void Update ()
     {
-        Vector3 mousePosition = mouseToWorld(Input.mousePosition);
+        Vector3 mousePosition = MouseToWorld(Input.mousePosition);
 
         // draw
         if (_main.deviceType == DeviceType.Tablet)
@@ -64,7 +66,7 @@ public class Draw : MonoBehaviour {
                 {
                     if (_currentVolume != "none")
                     {
-                        startDrawing(mousePosition);
+                        StartDrawing(mousePosition);
                     }
                 }
             }
@@ -72,60 +74,22 @@ public class Draw : MonoBehaviour {
             {
                 if (Drawing)
                 {
-                    updateDrawing(mousePosition);
+                    UpdateDrawing(mousePosition);
                 }
             }
             if (Input.GetMouseButtonUp(0))
             {
                 if (Drawing)
                 {
-                    endDrawing();
+                    EndDrawing();
 
+                    // broadcast line
                     Vector3[] positions = new Vector3[_currentLine.positionCount];
                     _currentLine.GetPositions(positions);
                     _assnetwork.broadcastLine("", _slicer.slice, _currentVolume, positions);
                 }
             }
         }
-    }
-
-    internal void addLine(string userID, int slice, string structure, Vector3[] line)
-    {
-        // create line
-
-        GameObject parent = GameObject.Find(structure);
-        if (parent == null) parent = new GameObject(structure);
-
-        GameObject go = Instantiate(Resources.Load("Line", typeof(GameObject))) as GameObject;
-        go.transform.parent = parent.transform;
-
-        LineRenderer lr = go.GetComponent<LineRenderer>();
-        lr.material = Resources.Load("Materials/Line" + structure, typeof(Material)) as Material;
-
-        if (!_points.ContainsKey(structure)) _points[structure] = new List<Vector3>();
-
-        // add points
-
-        foreach(Vector3 p in line)
-        {
-            lr.SetPosition(lr.positionCount++, p);
-            _points[structure].Add(p);
-        }
-
-        // update volume (or structure)
-
-        if (!_points.ContainsKey(structure)) return;
-
-        string volumeName = "Volume " + structure;
-
-        GameObject volume = GameObject.Find(volumeName);
-        if (volume == null)
-        {
-            volume = Instantiate(Resources.Load("Volume", typeof(GameObject))) as GameObject;
-            volume.name = volumeName;
-            volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/Volume" + structure, typeof(Material)) as Material;
-        }
-        volume.GetComponent<MeshFilter>().mesh = CreateMesh(structure);
     }
 
     void OnGUI()
@@ -143,56 +107,92 @@ public class Draw : MonoBehaviour {
         }
     }
 
-    private void endDrawing()
+    internal void AddLine(string userID, int slice, string structure, Vector3[] line)
     {
-        _updateVolume();
+        // create line
+        LineRenderer lr = CreateLine(structure);
+
+        // add points
+        foreach (Vector3 p in line)
+        {
+            AddPoint(p, lr, structure);
+        }
+
+        // update volume (or structure)
+        UpdateVolume(structure);
+    }
+
+    private void EndDrawing()
+    {
+        UpdateVolume(_currentVolume);
 
         _drawing = false;
     }
 
-    private void updateDrawing(Vector3 mousePosition)
+    private void UpdateDrawing(Vector3 worldPoint)
     {
+        Vector3 localPoint = tabletop.transform.worldToLocalMatrix.MultiplyPoint(worldPoint);
+
         if (!float.IsPositiveInfinity(_startingPoint.x))
         {
-            if (mousePosition != _startingPoint)
+            Vector3 localStartingPoint = tabletop.transform.worldToLocalMatrix.MultiplyPoint(_startingPoint);
+
+            if (localPoint != localStartingPoint)
             {
-                _currentLine.SetPosition(_currentLine.positionCount++, _startingPoint);
-                _points[_currentVolume].Add(_startingPoint);
+                AddPoint(localStartingPoint, _currentLine, _currentVolume);
+                AddPoint(localPoint, _currentLine, _currentVolume);
 
                 _startingPoint = Vector3.one * float.PositiveInfinity;
-
-                _currentLine.SetPosition(_currentLine.positionCount++, mousePosition);
-                _points[_currentVolume].Add(mousePosition);
             }
         }
-        else if (mousePosition != _currentLine.GetPosition(_currentLine.positionCount - 1))
+        else if (localPoint != _currentLine.GetPosition(_currentLine.positionCount - 1))
         {
-            _currentLine.SetPosition(_currentLine.positionCount++, mousePosition);
-            _points[_currentVolume].Add(mousePosition);
+            AddPoint(localPoint, _currentLine, _currentVolume);
         }
     }
 
-    private void startDrawing(Vector3 point)
+    private void AddPoint(Vector3 localPoint, LineRenderer lineRenderer, string volumeName)
     {
-        GameObject parent = GameObject.Find(_currentVolume);
-        if (parent == null) parent = new GameObject(_currentVolume);
+        lineRenderer.SetPosition(lineRenderer.positionCount++, localPoint);
+        _points[volumeName].Add(localPoint);
+    }
 
-        GameObject go = Instantiate(Resources.Load("Line", typeof(GameObject))) as GameObject;
-        go.transform.parent = parent.transform;
-
-        _currentLine = go.GetComponent<LineRenderer>();
-        _currentLine.material = Resources.Load("Materials/Line" + _currentVolume, typeof(Material)) as Material;
-
-        if (!_points.ContainsKey(_currentVolume)) _points[_currentVolume] = new List<Vector3>();
+    private void StartDrawing(Vector3 point)
+    {
+        _currentLine = CreateLine(_currentVolume);
 
         _startingPoint = point;
 
         _drawing = true;
     }
 
-    private Vector3 mouseToWorld(Vector2 mousePosition)
+    private LineRenderer CreateLine(string volumeName)
     {
-        Plane plane = new Plane(Camera.main.transform.forward, Camera.main.transform.position + Camera.main.transform.forward * _slicer.slice);
+        GameObject parent = GameObject.Find(volumeName);
+        if (parent == null)
+        {
+            parent = new GameObject(volumeName);
+            parent.transform.parent = tabletop;
+            parent.transform.localPosition = Vector3.zero;
+            parent.transform.localRotation = Quaternion.identity;
+        }
+
+        GameObject go = Instantiate(Resources.Load("Line", typeof(GameObject))) as GameObject;
+        go.transform.parent = parent.transform;
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+
+        LineRenderer lr = go.GetComponent<LineRenderer>();
+        lr.material = Resources.Load("Materials/Line" + volumeName, typeof(Material)) as Material;
+
+        if (!_points.ContainsKey(volumeName)) _points[volumeName] = new List<Vector3>();
+
+        return lr;
+    }
+
+    private Vector3 MouseToWorld(Vector2 mousePosition)
+    {
+        Plane plane = new Plane(Camera.main.transform.forward, Camera.main.transform.position + Camera.main.transform.forward * _slicer.slice * _slicer.sliceDepth);
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
         float hitDistance;
@@ -203,21 +203,24 @@ public class Draw : MonoBehaviour {
             return Vector3.zero;
     }
 
-    private void _updateVolume()
+    private void UpdateVolume(string volumeName)
     {
-        if (_currentVolume == "none") return;
-        if (!_points.ContainsKey(_currentVolume)) return;
+        if (volumeName == "none") return;
+        if (!_points.ContainsKey(volumeName)) return;
 
-        string volumeName = "Volume " + _currentVolume;
+        string fullVolumeName = "Volume " + volumeName;
 
-        GameObject volume = GameObject.Find(volumeName);
+        GameObject volume = GameObject.Find(fullVolumeName);
         if(volume == null)
         {
             volume = Instantiate(Resources.Load("Volume", typeof(GameObject))) as GameObject;
-            volume.name = volumeName;
-            volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/Volume" + _currentVolume, typeof(Material)) as Material;
+            volume.name = fullVolumeName;
+            volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/Volume" + volumeName, typeof(Material)) as Material;
+            volume.transform.parent = tabletop;
+            volume.transform.localPosition = Vector3.zero;
+            volume.transform.localRotation = Quaternion.identity;
         }
-        volume.GetComponent<MeshFilter>().mesh = CreateMesh(_currentVolume);
+        volume.GetComponent<MeshFilter>().mesh = CreateMesh(volumeName);
     }
 
     private Mesh CreateMesh(String volume)
@@ -230,7 +233,9 @@ public class Draw : MonoBehaviour {
 
         int i = 0;
         foreach (Vector3 v in _points[volume])
+        {
             vertices[i++] = new double[3] { v.x, v.y, v.z };
+        }
 
         try
         {
@@ -241,15 +246,15 @@ public class Draw : MonoBehaviour {
             i = 0;
             foreach (MIConvexHull.DefaultVertex v in result.Points)
             {
-                vertices2.Add(toVec(v));
+                vertices2.Add(VertexToVector(v));
             }
             m.vertices = vertices2.ToArray();
 
             foreach (var face in result.Faces)
             {
-                triangles.Add(vertices2.IndexOf(toVec(face.Vertices[0])));
-                triangles.Add(vertices2.IndexOf(toVec(face.Vertices[1])));
-                triangles.Add(vertices2.IndexOf(toVec(face.Vertices[2])));
+                triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[0])));
+                triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[1])));
+                triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[2])));
             }
 
             m.triangles = triangles.ToArray();
@@ -263,7 +268,7 @@ public class Draw : MonoBehaviour {
         return m;
     }
 
-    private Vector3 toVec(MIConvexHull.DefaultVertex v)
+    private Vector3 VertexToVector(MIConvexHull.DefaultVertex v)
     {
         return new Vector3((float)v.Position[0], (float)v.Position[1], (float)v.Position[2]);
     }
