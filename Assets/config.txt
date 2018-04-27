@@ -1,4 +1,4 @@
-device.type=Tablet
+device.type=Desktop
 peer.type=server
-server.address=127.0.0.1
+server.address=146.193.224.129
 server.port=5000
