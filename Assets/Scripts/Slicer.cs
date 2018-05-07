@@ -6,7 +6,15 @@ using UnityEngine;
 public class Slicer : MonoBehaviour {
 
     public int slice = 1;
-    public float sliceDepth = 0.1f;
+    private float _sliceDepth = 0.05f;
+
+    public float SliceDepth
+    {
+        get
+        {
+            return _sliceDepth;
+        }
+    }
 
     private int _slideBorder;
     private Rect _sliderArea;

@@ -1,4 +1,5 @@
-device.type=Desktop
+device.type=Tablet
 peer.type=server
 server.address=146.193.224.129
 server.port=5000
+slices.path=D:\DMendes\Dev\Coupes KVW_jpg\

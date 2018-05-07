@@ -25,6 +25,10 @@ public class Draw : MonoBehaviour {
 
     public Transform tabletop;
 
+    public float pointTolerance;
+
+    public bool disableTabletVolumes;
+
     public bool Drawing
     {
         get
@@ -89,6 +93,17 @@ public class Draw : MonoBehaviour {
                     _assnetwork.broadcastLine("", _slicer.slice, _currentVolume, positions);
                 }
             }
+
+            // if more than one touch abort drawing
+            if (Drawing && Input.touchCount > 1)
+                AbortDrawing();
+        }
+
+        // test Abort drawing
+        if(Input.GetKeyDown(KeyCode.A))
+        {
+            if (Drawing)
+                AbortDrawing();
         }
     }
 
@@ -122,6 +137,14 @@ public class Draw : MonoBehaviour {
         UpdateVolume(structure);
     }
 
+    private void AbortDrawing()
+    {
+        _points[_currentVolume].RemoveRange(_points[_currentVolume].Count - _currentLine.positionCount, _currentLine.positionCount);
+        Destroy(_currentLine.gameObject);
+
+        _drawing = false;
+    }
+
     private void EndDrawing()
     {
         UpdateVolume(_currentVolume);
@@ -137,7 +160,7 @@ public class Draw : MonoBehaviour {
         {
             Vector3 localStartingPoint = tabletop.transform.worldToLocalMatrix.MultiplyPoint(_startingPoint);
 
-            if (localPoint != localStartingPoint)
+            if (CheckTolerance(localPoint, localStartingPoint))
             {
                 AddPoint(localStartingPoint, _currentLine, _currentVolume);
                 AddPoint(localPoint, _currentLine, _currentVolume);
@@ -145,10 +168,15 @@ public class Draw : MonoBehaviour {
                 _startingPoint = Vector3.one * float.PositiveInfinity;
             }
         }
-        else if (localPoint != _currentLine.GetPosition(_currentLine.positionCount - 1))
+        else if (CheckTolerance(localPoint, _currentLine.GetPosition(_currentLine.positionCount - 1)))
         {
             AddPoint(localPoint, _currentLine, _currentVolume);
         }
+    }
+
+    private bool CheckTolerance(Vector3 p1, Vector3 p2)
+    {
+        return Vector3.Distance(p1, p2) > pointTolerance;
     }
 
     private void AddPoint(Vector3 localPoint, LineRenderer lineRenderer, string volumeName)
@@ -177,7 +205,7 @@ public class Draw : MonoBehaviour {
             parent.transform.localRotation = Quaternion.identity;
         }
 
-        GameObject go = Instantiate(Resources.Load("Line", typeof(GameObject))) as GameObject;
+        GameObject go = Instantiate(Resources.Load("Prefabs/Line", typeof(GameObject))) as GameObject;
         go.transform.parent = parent.transform;
         go.transform.localPosition = Vector3.zero;
         go.transform.localRotation = Quaternion.identity;
@@ -192,7 +220,7 @@ public class Draw : MonoBehaviour {
 
     private Vector3 MouseToWorld(Vector2 mousePosition)
     {
-        Plane plane = new Plane(Camera.main.transform.forward, Camera.main.transform.position + Camera.main.transform.forward * _slicer.slice * _slicer.sliceDepth);
+        Plane plane = new Plane(Camera.main.transform.forward, Camera.main.transform.position + Camera.main.transform.forward * _slicer.slice * _slicer.SliceDepth);
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
         float hitDistance;
@@ -205,6 +233,7 @@ public class Draw : MonoBehaviour {
 
     private void UpdateVolume(string volumeName)
     {
+        if (_main.deviceType == DeviceType.Tablet && disableTabletVolumes) return;
         if (volumeName == "none") return;
         if (!_points.ContainsKey(volumeName)) return;
 
@@ -213,7 +242,7 @@ public class Draw : MonoBehaviour {
         GameObject volume = GameObject.Find(fullVolumeName);
         if(volume == null)
         {
-            volume = Instantiate(Resources.Load("Volume", typeof(GameObject))) as GameObject;
+            volume = Instantiate(Resources.Load("Prefabs/Volume", typeof(GameObject))) as GameObject;
             volume.name = fullVolumeName;
             volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/Volume" + volumeName, typeof(Material)) as Material;
             volume.transform.parent = tabletop;

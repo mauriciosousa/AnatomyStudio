@@ -48,6 +48,14 @@ public class ConfigProperties : MonoBehaviour {
         }
     }
 
+    public string slicesPath
+    {
+        get
+        {
+            return _load("slices.path");
+        }
+    }
+
     private string _load(string property)
     {
         if (File.Exists(configFilenameFullPath))

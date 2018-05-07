@@ -21,43 +21,73 @@ public class Main : MonoBehaviour {
     public GameObject mainCamera;
     public GameObject metaCamera;
 
+    public List<GameObject> metaObjects;
+
 	// Use this for initialization
 	void Start ()
     {
         _slicer = GetComponent<Slicer>();
         _config = GetComponent<ConfigProperties>();
         deviceType = _config.device;
-    }
-	
-	// Update is called once per frame
-	void Update ()
-    {
+
+        // hide / show objects
+        if (deviceType == DeviceType.Meta || deviceType == DeviceType.Desktop)
+        {
+            foreach (GameObject go in metaObjects)
+                go.SetActive(true);
+        }
+        else
+        {
+            foreach (GameObject go in metaObjects)
+                go.SetActive(false);
+        }
+
         // Setup camera
         if (deviceType == DeviceType.Tabletop)
         {
             metaCamera.SetActive(false);
             mainCamera.SetActive(true);
             mainCamera.GetComponent<FlyCamera>().enabled = false;
-            updatePerspectiveCamera();
+            mainCamera.GetComponent<TouchCamera>().enabled = false;
+            initPerspectiveCamera();
         }
-        else if(deviceType == DeviceType.Tablet)
+        else if (deviceType == DeviceType.Tablet)
         {
             metaCamera.SetActive(false);
             mainCamera.SetActive(true);
             mainCamera.GetComponent<FlyCamera>().enabled = false;
+            mainCamera.GetComponent<TouchCamera>().enabled = true;
+
+            Camera camera = mainCamera.GetComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 0.5f;
+            mainCamera.transform.localPosition = new Vector3(0, 0.25f, 0);
+            mainCamera.transform.localRotation = Quaternion.identity;
+
             updateOrtographicCamera();
         }
-        else if(deviceType == DeviceType.Desktop)
+        else if (deviceType == DeviceType.Desktop)
         {
             metaCamera.SetActive(false);
             mainCamera.SetActive(true);
             mainCamera.GetComponent<FlyCamera>().enabled = true;
-            updatePerspectiveCamera();
+            mainCamera.GetComponent<TouchCamera>().enabled = false;
+            initPerspectiveCamera();
         }
-        else if(deviceType == DeviceType.Meta)
+        else if (deviceType == DeviceType.Meta)
         {
             metaCamera.SetActive(true);
             mainCamera.SetActive(false);
+        }
+    }
+	
+	// Update is called once per frame
+	void Update ()
+    {
+        // Setup camera
+        if(deviceType == DeviceType.Tablet)
+        {
+            updateOrtographicCamera();
         }
     }
 
@@ -65,15 +95,11 @@ public class Main : MonoBehaviour {
     {
         Camera camera = mainCamera.GetComponent<Camera>();
 
-        camera.orthographic = true;
-        camera.orthographicSize = 1.0f;
-        camera.nearClipPlane = _slicer.slice * 0.1f - 0.05f;
-        camera.farClipPlane = _slicer.slice * 0.1f + 0.05f;
-        camera.transform.localPosition = new Vector3(0, 0.25f, 0);
-        camera.transform.localRotation = Quaternion.identity;
+        camera.nearClipPlane = _slicer.slice * _slicer.SliceDepth - _slicer.SliceDepth * 0.5f;
+        camera.farClipPlane = _slicer.slice * _slicer.SliceDepth + _slicer.SliceDepth * 0.5f;
     }
 
-    private void updatePerspectiveCamera()
+    private void initPerspectiveCamera()
     {
         Camera camera = mainCamera.GetComponent<Camera>();
 
