@@ -9,18 +9,33 @@ public class SliceLoader : MonoBehaviour {
     private Slicer _slicer;
     private int _currentSlice;
     private string _slicesPath;
+    private FileInfo[] _filesInfo;
+
+    private int _slicesCount;
+    public int SlicesCount
+    {
+        get
+        {
+            return _slicesCount;
+        }
+    }
 
     // Use this for initialization
     void Start ()
     {
-        _slicesPath = GameObject.Find("Main").GetComponent<ConfigProperties>().slicesPath;
-
         _slicer = GameObject.Find("Main").GetComponent<Slicer>();
         _currentSlice = _slicer.slice;
 
         _texture = new Texture2D(2, 2, TextureFormat.BGRA32, false);
 
-        byte[] fileData = File.ReadAllBytes(_slicesPath + "\\" + _currentSlice + ".jpg");
+        _slicesPath = GameObject.Find("Main").GetComponent<ConfigProperties>().slicesPath;
+
+        // folder info
+        DirectoryInfo info = new DirectoryInfo(_slicesPath);
+        _filesInfo = info.GetFiles("*.jpg");
+        _slicesCount = _filesInfo.Length;
+
+        byte[] fileData = File.ReadAllBytes(_slicesPath + "\\" + GetSliceName(_currentSlice));
         _texture.LoadImage(fileData);
 
         this.GetComponent<Renderer>().material.mainTexture = _texture;
@@ -38,11 +53,16 @@ public class SliceLoader : MonoBehaviour {
         {
             _currentSlice = _slicer.slice;
 
-            byte[] fileData = File.ReadAllBytes(_slicesPath + "\\" + _currentSlice + ".jpg");
+            byte[] fileData = File.ReadAllBytes(_slicesPath + "\\" + GetSliceName(_currentSlice));
             _texture.LoadImage(fileData);
         }
 
         // refresh position
         this.transform.localPosition = new Vector3(this.transform.position.x, this.transform.position.y, _currentSlice * _slicer.SliceDepth);
 	}
+
+    public string GetSliceName(int slice)
+    {
+        return _filesInfo[slice - 1].Name;
+    }
 }
