@@ -56,6 +56,14 @@ public class ConfigProperties : MonoBehaviour {
         }
     }
 
+    public string slicesHttp
+    {
+        get
+        {
+            return _load("slices.http");
+        }
+    }
+
     private string _load(string property)
     {
         if (File.Exists(configFilenameFullPath))

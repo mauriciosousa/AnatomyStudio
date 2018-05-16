@@ -12,6 +12,9 @@ public class TouchCamera : MonoBehaviour {
 
     private Camera _camera;
 
+    private float maxZoom = 0.05f;
+    private float minZoom = 0.75f;
+
     // legacy mouse control
     public bool enableMouse;
     private Vector2 _lastMousePos;
@@ -55,6 +58,7 @@ public class TouchCamera : MonoBehaviour {
                 float lastDistance = Vector2.Distance(_lastTouchPos[0], _lastTouchPos[1]);
                 float newDistance = Vector2.Distance(newTouchPos[0], newTouchPos[1]);
                 _camera.orthographicSize *= lastDistance / newDistance;
+                ValidateZoom();
 
                 // set position
                 Vector3 newTouch1Pos = ScreenToPlane(newTouchPos[0], pl);
@@ -85,6 +89,10 @@ public class TouchCamera : MonoBehaviour {
         // ******
         // legacy mouse control
         // ******
+        if(Input.GetKeyDown(KeyCode.M))
+        {
+            enableMouse = !enableMouse;
+        }
         if (enableMouse)
         {
             if (Input.GetMouseButtonDown(1))
@@ -107,6 +115,7 @@ public class TouchCamera : MonoBehaviour {
                 {
                     _camera.orthographicSize *= 1.1f;
                 }
+                ValidateZoom();
 
                 // set position
                 Vector3 newPoint = ScreenToPlane(Input.mousePosition, pl);
@@ -141,6 +150,14 @@ public class TouchCamera : MonoBehaviour {
         Vector3 cameraPoint = ray.GetPoint(enter);
         Vector3 closestPoint = pl.ClosestPointOnPlane(sliceMesh.bounds.ClosestPoint(cameraPoint));
         this.transform.position += closestPoint - cameraPoint;
+    }
+
+    private void ValidateZoom()
+    {
+        if (_camera.orthographicSize < maxZoom)
+            _camera.orthographicSize = maxZoom;
+        else if (_camera.orthographicSize > minZoom)
+            _camera.orthographicSize = minZoom;
     }
 
     private Vector3 ScreenToPlane(Vector3 screenPoint, Plane plane)
