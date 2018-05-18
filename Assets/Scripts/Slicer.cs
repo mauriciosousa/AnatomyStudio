@@ -20,14 +20,13 @@ public class Slicer : MonoBehaviour {
     private Main _main;
     private SliceLoader _loader;
 
-    public int slice = 1;
-
-    private float _sliceDepth = 0.05f;
-    public float SliceDepth
+    private int _slice = 1;
+    private int _sliceNr = 1;
+    public int Slice
     {
         get
         {
-            return _sliceDepth;
+            return _sliceNr;
         }
     }
 
@@ -115,7 +114,7 @@ public class Slicer : MonoBehaviour {
         _offset = 0;
         _slicesChanged = 0;
         _scrolling = false;
-        _fakeSlice = slice;
+        _fakeSlice = _slice;
 
         // thumbnails
 
@@ -128,9 +127,9 @@ public class Slicer : MonoBehaviour {
 
         _mouseHistory = new List<MouseSnapshot>();
     }
-	
-	// Update is called once per frame
-	void Update ()
+
+    // Update is called once per frame
+    void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {
@@ -155,24 +154,27 @@ public class Slicer : MonoBehaviour {
                 _mouseHistory.Add(new MouseSnapshot(DateTime.Now, Input.mousePosition));
             }
         }
-        else if(Input.GetMouseButton(0))
+        else if (Input.GetMouseButton(0))
         {
-            float mouseDelta = -(Input.mousePosition.y - _mouseHistory[_mouseHistory.Count - 1].position.y);
-
-            _mouseHistory.Add(new MouseSnapshot(DateTime.Now, Input.mousePosition));
-
-            float mouseYSpeed = -CalcMouseVelocity().y;
-
-            if (_sliding)
+            if (_sliding || _scrolling)
             {
-                int slicesDelta = (int)Mathf.Round(mouseDelta / Screen.height * (float)_loader.SlicesCount);
-                _fakeSlice = Mathf.Clamp(_fakeSlice - slicesDelta, 1, _loader.SlicesCount);
-                _slideSpeed = mouseYSpeed;
-            }
-            else if(_scrolling)
-            {
-                _offset += mouseDelta;
-                _offsetSpeed = mouseYSpeed;
+                float mouseDelta = -(Input.mousePosition.y - _mouseHistory[_mouseHistory.Count - 1].position.y);
+
+                _mouseHistory.Add(new MouseSnapshot(DateTime.Now, Input.mousePosition));
+
+                float mouseYSpeed = -CalcMouseVelocity().y;
+
+                if (_sliding)
+                {
+                    int slicesDelta = (int)Mathf.Round(mouseDelta / Screen.height * (float)_loader.SlicesCount);
+                    _fakeSlice = Mathf.Clamp(_fakeSlice - slicesDelta, 1, _loader.SlicesCount);
+                    _slideSpeed = mouseYSpeed;
+                }
+                else if (_scrolling)
+                {
+                    _offset += mouseDelta;
+                    _offsetSpeed = mouseYSpeed;
+                }
             }
         }
         else
@@ -189,12 +191,13 @@ public class Slicer : MonoBehaviour {
                 if (_offsetSpeed == 0)
                 {
                     _scrolling = false;
-                    slice = _fakeSlice;
+                    _slice = _fakeSlice;
+                    _sliceNr = _loader.GetRealSliceNumber(_slice);
                     _loader.ForceSliceLoad();
                 }
                 else _offset += _offsetSpeed * Time.deltaTime;
             }
-            else if(_sliding)
+            else if (_sliding)
             {
                 if (_slideSpeed > 0) _slideSpeed = Mathf.Max(_slideSpeed - speedLoss, 0);
                 else _slideSpeed = Mathf.Min(_slideSpeed + speedLoss, 0);
@@ -202,13 +205,17 @@ public class Slicer : MonoBehaviour {
                 if (_slideSpeed == 0)
                 {
                     _sliding = false;
-                    slice = _fakeSlice;
+                    _slice = _fakeSlice;
+                    _sliceNr = _loader.GetRealSliceNumber(_slice);
                     _loader.ForceSliceLoad();
                 }
                 else
                 {
                     int slicesDelta = (int)Mathf.Round(_slideSpeed * Time.deltaTime / Screen.height * (float)_loader.SlicesCount);
                     _fakeSlice = Mathf.Clamp(_fakeSlice - slicesDelta, 1, _loader.SlicesCount);
+
+                    if (_fakeSlice == 1 || _fakeSlice == _loader.SlicesCount)
+                        _slideSpeed = 0;
                 }
             }
         }
@@ -233,10 +240,11 @@ public class Slicer : MonoBehaviour {
         }
 
         // lock min & max slices
-        if (_fakeSlice == 1 && _offset > 0)
+        if ((_fakeSlice == 1 && _offset > 0) || (_fakeSlice == _loader.SlicesCount && _offset < 0))
+        {
             _offset = 0;
-        if (_fakeSlice == _loader.SlicesCount && _offset < 0)
-            _offset = 0;
+            _offsetSpeed = 0;
+        }
     }
 
     void OnGUI()
@@ -266,12 +274,12 @@ public class Slicer : MonoBehaviour {
             float halfSliceCount = Mathf.Ceil(otherSlicesCount / 2.0f);
 
             // draw current slice
-            GUI.Box(new Rect(left + sliderWidth + 1, currentSlicePosY + 1, sliceWidth - 2, currentSliceHeight - 2), _loader.GetSliceName(_fakeSlice), _currentSliceStyle);
+            GUI.Box(new Rect(left + sliderWidth + 1, currentSlicePosY + 1, sliceWidth - 2, currentSliceHeight - 2), "" + _loader.GetRealSliceNumber(_fakeSlice), _currentSliceStyle);
             // draw slices up
             for (int i = 1; i <= halfSliceCount; i++)
             {
                 if (_fakeSlice - i < 1) break;
-                if (GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY - sliceHeight * i + 1, sliceWidth - 2, sliceHeight - 2), _loader.GetSliceName(_fakeSlice - i), _sliceStyle))
+                if (GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY - sliceHeight * i + 1, sliceWidth - 2, sliceHeight - 2), "" + _loader.GetRealSliceNumber(_fakeSlice - i), _sliceStyle))
                 {
                     if (_slicesChanged == 0)
                     {
@@ -283,7 +291,7 @@ public class Slicer : MonoBehaviour {
             for (int i = 1; i <= halfSliceCount; i++)
             {
                 if (_fakeSlice + i > _loader.SlicesCount) break;
-                if(GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY + currentSliceHeight + sliceHeight * (i - 1) + 1, sliceWidth - 2, sliceHeight - 2), _loader.GetSliceName(_fakeSlice + i), _sliceStyle))
+                if(GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY + currentSliceHeight + sliceHeight * (i - 1) + 1, sliceWidth - 2, sliceHeight - 2), "" + _loader.GetRealSliceNumber(_fakeSlice + i), _sliceStyle))
                 {
                     if (_slicesChanged == 0)
                     {
@@ -296,7 +304,7 @@ public class Slicer : MonoBehaviour {
 
             if(_sliding || _scrolling)
             {
-                Texture2D thumbTex = _loader.GetThumbnail(_fakeSlice);
+                Texture2D thumbTex = _loader.GetThumbnail(_loader.GetRealSliceNumber(_fakeSlice));
                 float thumbWidth = thumbHeight * thumbTex.width / thumbTex.height;
                 GUI.Box(new Rect(left + _sliderArea.width, Screen.height / 2.0f - thumbHeight / 2.0f - 2, thumbWidth + 4, thumbHeight + 4), "", _sliderAreaStyle);
                 GUI.DrawTexture(new Rect(left + _sliderArea.width + 2, Screen.height / 2.0f - thumbHeight / 2.0f, thumbWidth, thumbHeight), thumbTex, ScaleMode.ScaleAndCrop);
@@ -304,7 +312,7 @@ public class Slicer : MonoBehaviour {
         }
     }
 
-    private Texture2D CreateColorTexture(Color color)
+    public static Texture2D CreateColorTexture(Color color)
     {
         Texture2D texture = new Texture2D(1, 1, TextureFormat.ARGB32, false);
         texture.SetPixel(0, 0, color);
@@ -332,7 +340,7 @@ public class Slicer : MonoBehaviour {
         return _sliding || _scrolling;
     }
 
-    private Color ColorFromRGBA(int r, int g, int b, int a = 255)
+    public static Color ColorFromRGBA(int r, int g, int b, int a = 255)
     {
         return new Color(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
     }

@@ -15,6 +15,7 @@ public class Main : MonoBehaviour {
     public DeviceType deviceType;
 
     private Slicer _slicer;
+    private SliceLoader _loader;
 
     private ConfigProperties _config;
 
@@ -27,6 +28,7 @@ public class Main : MonoBehaviour {
 	void Start ()
     {
         _slicer = GetComponent<Slicer>();
+        _loader = GetComponent<SliceLoader>();
         _config = GetComponent<ConfigProperties>();
         deviceType = _config.device;
 
@@ -95,8 +97,8 @@ public class Main : MonoBehaviour {
     {
         Camera camera = mainCamera.GetComponent<Camera>();
 
-        camera.nearClipPlane = _slicer.slice * _slicer.SliceDepth - _slicer.SliceDepth * 0.5f;
-        camera.farClipPlane = _slicer.slice * _slicer.SliceDepth + _slicer.SliceDepth * 0.5f;
+        camera.nearClipPlane = _slicer.Slice * _loader.sliceDepth - _loader.sliceDepth * 0.5f;
+        camera.farClipPlane = _slicer.Slice * _loader.sliceDepth + _loader.sliceDepth * 0.5f;
     }
 
     private void initPerspectiveCamera()
