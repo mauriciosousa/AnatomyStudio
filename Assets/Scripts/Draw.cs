@@ -7,11 +7,9 @@ public class Draw : MonoBehaviour {
 
     private LineRenderer _currentLine;
     private Slicer _slicer;
-    private SliceLoader _loader;
     private StructuresList _sList;
 
     private string _currentVolume;
-    private Dictionary<string, List<Vector3>> _points;
 
     private Vector3 _startingPoint;
     private bool _drawing;
@@ -33,6 +31,20 @@ public class Draw : MonoBehaviour {
         }
     }
 
+    private bool _enabled;
+    public bool Enabled
+    {
+        get
+        {
+            return _enabled;
+        }
+
+        set
+        {
+            _enabled = value;
+        }
+    }
+
     // Use this for initialization
     void Start ()
     {
@@ -40,11 +52,10 @@ public class Draw : MonoBehaviour {
         _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
 
         _slicer = GetComponent<Slicer>();
-        _loader = GetComponent<SliceLoader>();
         _sList = GetComponent<StructuresList>();
         _currentVolume = "none";
-        _points = new Dictionary<string, List<Vector3>>();
         _drawing = false;
+        _enabled = true;
     }
 	
 	// Update is called once per frame
@@ -56,17 +67,18 @@ public class Draw : MonoBehaviour {
             // update volume
             _currentVolume = _sList.CurrentStructure;
 
-            Vector3 mousePosition = MouseToWorld(Input.mousePosition);
+            Vector3 mousePosition = Utils.MouseToWorld(Input.mousePosition);
 
             if (Input.GetMouseButtonDown(0))
             {
-                Vector3 mouseToGUI = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-
-                if (!(_slicer.SliderArea.Contains(mouseToGUI) || _sList.SliderArea.Contains(mouseToGUI)))
+                if (_enabled)
                 {
-                    if (_currentVolume != "none")
+                    if (!Utils.GUIContains(Input.mousePosition))
                     {
-                        StartDrawing(mousePosition);
+                        if (_currentVolume != "none")
+                        {
+                            StartDrawing(mousePosition);
+                        }
                     }
                 }
             }
@@ -100,6 +112,12 @@ public class Draw : MonoBehaviour {
                 if (Drawing)
                     AbortDrawing();
             }
+
+            // test Disable
+            if(Input.GetKeyDown(KeyCode.D))
+            {
+                _enabled = !_enabled;
+            }
         }
     }
 
@@ -125,7 +143,6 @@ public class Draw : MonoBehaviour {
 
     private void AbortDrawing()
     {
-        _points[_currentVolume].RemoveRange(_points[_currentVolume].Count - _currentLine.positionCount, _currentLine.positionCount);
         Destroy(_currentLine.gameObject);
 
         _drawing = false;
@@ -160,7 +177,7 @@ public class Draw : MonoBehaviour {
         }
     }
 
-    private bool CheckTolerance(Vector3 p1, Vector3 p2)
+    public bool CheckTolerance(Vector3 p1, Vector3 p2)
     {
         return Vector3.Distance(p1, p2) > pointTolerance;
     }
@@ -168,7 +185,6 @@ public class Draw : MonoBehaviour {
     private void AddPoint(Vector3 localPoint, LineRenderer lineRenderer, string volumeName)
     {
         lineRenderer.SetPosition(lineRenderer.positionCount++, localPoint);
-        _points[volumeName].Add(localPoint);
     }
 
     private void StartDrawing(Vector3 point)
@@ -194,6 +210,8 @@ public class Draw : MonoBehaviour {
         }
 
         GameObject go = Instantiate(Resources.Load("Prefabs/Line", typeof(GameObject))) as GameObject;
+        go.name = GenerateID();
+        go.tag = "DrawLine";
         go.transform.parent = parent.transform;
         go.transform.localPosition = Vector3.zero;
         go.transform.localRotation = Quaternion.identity;
@@ -201,29 +219,13 @@ public class Draw : MonoBehaviour {
         LineRenderer lr = go.GetComponent<LineRenderer>();
         lr.material = Resources.Load("Materials/" + _sList.GetMaterialName(volumeName) + "Line", typeof(Material)) as Material;
 
-        if (!_points.ContainsKey(volumeName)) _points[volumeName] = new List<Vector3>();
-
         return lr;
-    }
-
-    private Vector3 MouseToWorld(Vector2 mousePosition)
-    {
-        Plane plane = new Plane(Camera.main.transform.forward, Camera.main.transform.position + Camera.main.transform.forward * _slicer.Slice * _loader.sliceDepth);
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-        float hitDistance;
-
-        if(plane.Raycast(ray, out hitDistance))
-            return ray.GetPoint(hitDistance);
-        else
-            return Vector3.zero;
     }
 
     private void UpdateVolume(string volumeName)
     {
         if (_main.deviceType == DeviceType.Tablet && disableTabletVolumes) return;
         if (volumeName == "none") return;
-        if (!_points.ContainsKey(volumeName)) return;
 
         string fullVolumeName = volumeName + "Mesh";
 
@@ -240,18 +242,37 @@ public class Draw : MonoBehaviour {
         volume.GetComponent<MeshFilter>().mesh = CreateMesh(volumeName);
     }
 
-    private Mesh CreateMesh(String volume)
+    private Mesh CreateMesh(string volume)
     {
         Mesh m = new Mesh();
         m.name = "ScriptedMesh";
         List<int> triangles = new List<int>();
 
-        double[][] vertices = new double[_points[volume].Count][];
+        GameObject go = GameObject.Find(volume + "Lines");
+
+        int numPoints = 0;
+        foreach (Transform child in go.transform)
+        {
+            if(child.gameObject.activeInHierarchy)
+                numPoints += child.GetComponent<LineRenderer>().positionCount;
+        }
+
+        if (numPoints < 3) return null;
+
+        double[][] vertices = new double[numPoints][];
 
         int i = 0;
-        foreach (Vector3 v in _points[volume])
+        foreach (Transform child in go.transform)
         {
-            vertices[i++] = new double[3] { v.x, v.y, v.z };
+            if (child.gameObject.activeInHierarchy)
+            {
+                LineRenderer lr = child.GetComponent<LineRenderer>();
+                for (int j = 0; j < lr.positionCount; j++)
+                {
+                    Vector3 v = lr.GetPosition(j);
+                    vertices[i++] = new double[3] { v.x, v.y, v.z };
+                }
+            }
         }
 
         try
@@ -288,5 +309,18 @@ public class Draw : MonoBehaviour {
     private Vector3 VertexToVector(MIConvexHull.DefaultVertex v)
     {
         return new Vector3((float)v.Position[0], (float)v.Position[1], (float)v.Position[2]);
+    }
+
+    private string GenerateID()
+    {
+        return Guid.NewGuid().ToString("N");
+    }
+
+    public void RemoveLine(GameObject gameObject)
+    {
+        string volume = gameObject.transform.parent.gameObject.name.Replace("Lines", "");
+        gameObject.SetActive(false);
+        Destroy(gameObject);
+        UpdateVolume(volume);
     }
 }

@@ -13,7 +13,7 @@ public class TouchCamera : MonoBehaviour {
     private Camera _camera;
 
     private float maxZoom = 0.05f;
-    private float minZoom = 0.75f;
+    private float minZoom = 1.0f;
 
     // legacy mouse control
     public bool enableMouse;
@@ -154,10 +154,13 @@ public class TouchCamera : MonoBehaviour {
 
     private void ValidateZoom()
     {
-        if (_camera.orthographicSize < maxZoom)
-            _camera.orthographicSize = maxZoom;
-        else if (_camera.orthographicSize > minZoom)
-            _camera.orthographicSize = minZoom;
+        float correctMaxZoom = maxZoom * sliceMesh.gameObject.transform.localScale.y;
+        float correctMinZoom = minZoom * sliceMesh.gameObject.transform.localScale.y;
+
+        if (_camera.orthographicSize < correctMaxZoom)
+            _camera.orthographicSize = correctMaxZoom;
+        else if (_camera.orthographicSize > correctMinZoom)
+            _camera.orthographicSize = correctMinZoom;
     }
 
     private Vector3 ScreenToPlane(Vector3 screenPoint, Plane plane)

@@ -3,18 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MouseSnapshot
-{
-    public DateTime time;
-    public Vector2 position;
-
-    public MouseSnapshot(DateTime time, Vector2 position)
-    {
-        this.time = time;
-        this.position = position;
-    }
-}
-
 public class Slicer : MonoBehaviour {
 
     private Main _main;
@@ -74,11 +62,6 @@ public class Slicer : MonoBehaviour {
 
     private GUIStyle _nameStyle;
 
-    // velocity calculation
-
-    private List<MouseSnapshot> _mouseHistory;
-    private float _timeInterval = 0.1f; // in seconds
-
     // Use this for initialization
     void Start ()
     {
@@ -88,15 +71,15 @@ public class Slicer : MonoBehaviour {
         _sliderArea = new Rect(0, 0, sliderWidth + sliceWidth, Screen.height);
 
         _sliderAreaStyle = new GUIStyle();
-        _sliderAreaStyle.normal.background = CreateColorTexture(ColorFromRGBA(238, 238, 236, 242));
+        _sliderAreaStyle.normal.background = Utils.CreateColorTexture(238, 238, 236, 242);
 
         // overall slider
 
         _backgroundStyle = new GUIStyle();
-        _backgroundStyle.normal.background = CreateColorTexture(ColorFromRGBA(186, 189, 182));
+        _backgroundStyle.normal.background = Utils.CreateColorTexture(186, 189, 182);
 
         _cursorStyle = new GUIStyle();
-        _cursorStyle.normal.background = CreateColorTexture(ColorFromRGBA(0, 122, 255));
+        _cursorStyle.normal.background = Utils.CreateColorTexture(0, 122, 255);
 
         _sliding = false;
 
@@ -104,12 +87,12 @@ public class Slicer : MonoBehaviour {
 
         _sliceStyle = new GUIStyle();
         _sliceStyle.alignment = TextAnchor.MiddleCenter;
-        _sliceStyle.normal.textColor = ColorFromRGBA(46, 52, 54);
-        _sliceStyle.normal.background = CreateColorTexture(ColorFromRGBA(186, 189, 182));
+        _sliceStyle.normal.textColor = Utils.ColorFromRGBA(46, 52, 54);
+        _sliceStyle.normal.background = Utils.CreateColorTexture(186, 189, 182);
 
         _currentSliceStyle = new GUIStyle(_sliceStyle);
         _currentSliceStyle.normal.textColor = Color.white;
-        _currentSliceStyle.normal.background = CreateColorTexture(ColorFromRGBA(0, 122, 255));
+        _currentSliceStyle.normal.background = Utils.CreateColorTexture(0, 122, 255);
 
         _offset = 0;
         _slicesChanged = 0;
@@ -121,11 +104,7 @@ public class Slicer : MonoBehaviour {
         _nameStyle = new GUIStyle();
         _nameStyle.alignment = TextAnchor.MiddleCenter;
         _nameStyle.normal.textColor = Color.white;
-        _nameStyle.normal.background = CreateColorTexture(Color.black);
-
-        // velocity
-
-        _mouseHistory = new List<MouseSnapshot>();
+        _nameStyle.normal.background = Utils.CreateColorTexture(Color.black);
     }
 
     // Update is called once per frame
@@ -149,20 +128,14 @@ public class Slicer : MonoBehaviour {
                     _offsetSpeed = 0;
                     _slicesChanged = 0;
                 }
-
-                _mouseHistory.Clear();
-                _mouseHistory.Add(new MouseSnapshot(DateTime.Now, Input.mousePosition));
             }
         }
         else if (Input.GetMouseButton(0))
         {
             if (_sliding || _scrolling)
             {
-                float mouseDelta = -(Input.mousePosition.y - _mouseHistory[_mouseHistory.Count - 1].position.y);
-
-                _mouseHistory.Add(new MouseSnapshot(DateTime.Now, Input.mousePosition));
-
-                float mouseYSpeed = -CalcMouseVelocity().y;
+                float mouseDelta = -Utils.MouseDelta.y;
+                float mouseYSpeed = -Utils.MouseVelocity.y;
 
                 if (_sliding)
                 {
@@ -312,36 +285,8 @@ public class Slicer : MonoBehaviour {
         }
     }
 
-    public static Texture2D CreateColorTexture(Color color)
-    {
-        Texture2D texture = new Texture2D(1, 1, TextureFormat.ARGB32, false);
-        texture.SetPixel(0, 0, color);
-        texture.Apply();
-        return texture;
-    }
-
-    private Vector2 CalcMouseVelocity()
-    {
-        DateTime now = DateTime.Now;
-
-        while (_mouseHistory[0].time.AddSeconds(_timeInterval) < now)
-        {
-            _mouseHistory.RemoveAt(0);
-        }
-
-        float time = (float)_mouseHistory[_mouseHistory.Count - 1].time.Subtract(_mouseHistory[0].time).TotalSeconds;
-        Vector2 distance = _mouseHistory[_mouseHistory.Count - 1].position - _mouseHistory[0].position;
-
-        return distance / time;
-    }
-
     public bool IsSlicing()
     {
         return _sliding || _scrolling;
-    }
-
-    public static Color ColorFromRGBA(int r, int g, int b, int a = 255)
-    {
-        return new Color(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
     }
 }

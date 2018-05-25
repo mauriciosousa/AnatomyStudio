@@ -59,13 +59,7 @@ public class Main : MonoBehaviour {
             mainCamera.SetActive(true);
             mainCamera.GetComponent<FlyCamera>().enabled = false;
             mainCamera.GetComponent<TouchCamera>().enabled = true;
-
-            Camera camera = mainCamera.GetComponent<Camera>();
-            camera.orthographic = true;
-            camera.orthographicSize = 0.5f;
-            mainCamera.transform.localPosition = new Vector3(0, 0.25f, 0);
-            mainCamera.transform.localRotation = Quaternion.identity;
-
+            resizeOrtographicCamera();
             updateOrtographicCamera();
         }
         else if (deviceType == DeviceType.Desktop)
@@ -86,10 +80,21 @@ public class Main : MonoBehaviour {
 	// Update is called once per frame
 	void Update ()
     {
-        // Setup camera
-        if(deviceType == DeviceType.Tablet)
-        {
+        if (deviceType == DeviceType.Tablet)
             updateOrtographicCamera();
+    }
+
+    public void resizeOrtographicCamera()
+    {
+        if (deviceType == DeviceType.Tablet)
+        {
+            mainCamera.transform.localPosition = new Vector3(_loader.slice.transform.localPosition.x, _loader.slice.transform.localPosition.y, -_loader.SliceDepth);
+            mainCamera.transform.localRotation = Quaternion.identity;
+
+            Camera camera = mainCamera.GetComponent<Camera>();
+
+            camera.orthographic = true;
+            camera.orthographicSize = _loader.slice.transform.localScale.y / 2.0f;
         }
     }
 
@@ -97,8 +102,8 @@ public class Main : MonoBehaviour {
     {
         Camera camera = mainCamera.GetComponent<Camera>();
 
-        camera.nearClipPlane = _slicer.Slice * _loader.sliceDepth - _loader.sliceDepth * 0.5f;
-        camera.farClipPlane = _slicer.Slice * _loader.sliceDepth + _loader.sliceDepth * 0.5f;
+        camera.nearClipPlane = (_slicer.Slice - 1) * _loader.SliceDepth - _loader.SliceDepth * 0.5f - mainCamera.transform.localPosition.z;
+        camera.farClipPlane = (_slicer.Slice - 1) * _loader.SliceDepth + _loader.SliceDepth * 0.5f - mainCamera.transform.localPosition.z;
     }
 
     private void initPerspectiveCamera()

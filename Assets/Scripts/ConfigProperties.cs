@@ -64,6 +64,22 @@ public class ConfigProperties : MonoBehaviour {
         }
     }
 
+    public float slicesThickness
+    {
+        get
+        {
+            return float.Parse(_load("slices.thickness"));
+        }
+    }
+
+    public float slicesPixelSize
+    {
+        get
+        {
+            return float.Parse(_load("slices.pixelsize"));
+        }
+    }
+
     private string _load(string property)
     {
         if (File.Exists(configFilenameFullPath))

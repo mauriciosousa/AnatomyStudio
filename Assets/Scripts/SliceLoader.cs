@@ -16,10 +16,20 @@ public class SliceLoader : MonoBehaviour {
 
     public GameObject slice;
 
-    public float sliceDepth = 0.05f;
+    private float _pixelSize;
+
+    private float _sliceDepth = 0.05f;
+    public float SliceDepth
+    {
+        get
+        {
+            return _sliceDepth;
+        }
+    }
 
     private Texture2D _texture;
     private Slicer _slicer;
+    private Main _main;
     private int _currentSlice;
     private string _slicesPath;
     private string _slicesHttp;
@@ -45,9 +55,12 @@ public class SliceLoader : MonoBehaviour {
     void Start ()
     {
         _slicer = GetComponent<Slicer>();
+        _main = GetComponent<Main>();
         _currentSlice = _slicer.Slice;
         _slicesPath = GetComponent<ConfigProperties>().slicesPath;
         _slicesHttp = GetComponent<ConfigProperties>().slicesHttp;
+        _sliceDepth = GetComponent<ConfigProperties>().slicesThickness;
+        _pixelSize = GetComponent<ConfigProperties>().slicesPixelSize;
 
         _texture = new Texture2D(1, 1);
         _refreshAspect = true;
@@ -69,11 +82,7 @@ public class SliceLoader : MonoBehaviour {
 
         // load slice
         slice.GetComponent<Renderer>().material.mainTexture = _texture;
-        DownloadSlice(_currentSlice, true);
-
-        float sliceRatio = Screen.width / (float)Screen.height;
-        if (sliceRatio > 1) slice.transform.localScale = new Vector3(sliceRatio, 1.0f, 1.0f);
-        else slice.transform.localScale = new Vector3(1.0f, 1.0f / sliceRatio, 1.0f);
+        DownloadSlice(_currentSlice);
 
         // memmory stuff
         _lastUnload = DateTime.Now;
@@ -91,7 +100,7 @@ public class SliceLoader : MonoBehaviour {
         }
 
         // refresh position
-        slice.transform.localPosition = new Vector3(slice.transform.position.x, slice.transform.position.y, _currentSlice * sliceDepth);
+        slice.transform.localPosition = new Vector3(slice.transform.localPosition.x, slice.transform.localPosition.y, (_currentSlice - 1) * SliceDepth);
 
         // memmory stuff
         if(DateTime.Now > _lastUnload.AddSeconds(unloadInterval))
@@ -103,16 +112,16 @@ public class SliceLoader : MonoBehaviour {
         }
     }
 
-    private void DownloadSlice(int sliceNumber, bool refreshAspect = false)
+    private void DownloadSlice(int sliceNumber)
     {
         // set thumb as slice for immediate feedback
         LoadThumbnail(sliceNumber, _texture);
 
         // download slice
-        StartCoroutine(HTTPGetSlice(sliceNumber, refreshAspect));
+        StartCoroutine(HTTPGetSlice(sliceNumber));
     }
 
-    private IEnumerator HTTPGetSlice(int sliceNumber, bool refreshAspect)
+    private IEnumerator HTTPGetSlice(int sliceNumber)
     {
         string url = "http://" + _slicesHttp + "/" + sliceNumber + ".jpg"; 
 
@@ -128,13 +137,12 @@ public class SliceLoader : MonoBehaviour {
                     {
                         www.LoadImageIntoTexture(_texture);
 
-                        if (refreshAspect)
+                        if (_refreshAspect)
                         {
-                            float sliceRatio = _texture.width / (float)_texture.height;
-                            if (sliceRatio > 1) slice.transform.localScale = new Vector3(sliceRatio, 1.0f, 1.0f);
-                            else slice.transform.localScale = new Vector3(1.0f, 1.0f / sliceRatio, 1.0f);
+                            slice.transform.localScale = new Vector3(_texture.width * _pixelSize, _texture.height * _pixelSize, 1.0f);
+                            _main.resizeOrtographicCamera();
 
-                            refreshAspect = false;
+                            _refreshAspect = false;
                         }
                     }
                 }
