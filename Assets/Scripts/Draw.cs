@@ -96,9 +96,12 @@ public class Draw : MonoBehaviour {
                     EndDrawing();
 
                     // broadcast line
-                    Vector3[] positions = new Vector3[_currentLine.positionCount];
-                    _currentLine.GetPositions(positions);
-                    _assnetwork.broadcastLine("", _slicer.Slice, _currentVolume, positions);
+                    if (_currentLine != null && _currentLine.positionCount > 1)
+                    {
+                        Vector3[] positions = new Vector3[_currentLine.positionCount];
+                        _currentLine.GetPositions(positions);
+                        _assnetwork.broadcastLine("", _slicer.Slice, _currentVolume, positions);
+                    }
                 }
             }
 
@@ -165,6 +168,8 @@ public class Draw : MonoBehaviour {
 
             if (CheckTolerance(localPoint, localStartingPoint))
             {
+                _currentLine = CreateLine(_currentVolume);
+
                 AddPoint(localStartingPoint, _currentLine, _currentVolume);
                 AddPoint(localPoint, _currentLine, _currentVolume);
 
@@ -189,7 +194,7 @@ public class Draw : MonoBehaviour {
 
     private void StartDrawing(Vector3 point)
     {
-        _currentLine = CreateLine(_currentVolume);
+        _currentLine = null;
 
         _startingPoint = point;
 

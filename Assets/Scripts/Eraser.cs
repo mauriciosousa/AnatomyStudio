@@ -16,6 +16,19 @@ public class Eraser : MonoBehaviour {
     private GUIStyle _areaStyle;
     private GUIStyle _optionStyle;
     private GUIStyle _selectedStyle;
+    private GUIStyle _texStyle;
+
+    private Texture2D _rubberTex;
+    private Texture2D _pencilTex;
+
+    private Rect _buttonArea;
+    public Rect ButtonArea
+    {
+        get
+        {
+            return _buttonArea;
+        }
+    }
 
     // Use this for initialization
     void Start ()
@@ -35,6 +48,14 @@ public class Eraser : MonoBehaviour {
         _selectedStyle = new GUIStyle(_optionStyle);
         _selectedStyle.normal.textColor = Color.white;
         _selectedStyle.normal.background = Utils.CreateColorTexture(0, 122, 255);
+
+        _texStyle = new GUIStyle();
+        _texStyle.alignment = TextAnchor.MiddleCenter;
+
+        _rubberTex = Resources.Load("Textures/erase") as Texture2D;
+        _rubberTex.filterMode = FilterMode.Trilinear;
+        _pencilTex = Resources.Load("Textures/draw") as Texture2D;
+        _pencilTex.filterMode = FilterMode.Trilinear;
     }
 	
 	// Update is called once per frame
@@ -123,7 +144,9 @@ public class Eraser : MonoBehaviour {
         int height = 40;
         int width = 50;
 
-        if (GUI.Button(new Rect(Screen.width - width * 2 - right, border, width * 2, height), "", _areaStyle))
+        _buttonArea = new Rect(Screen.width - width * 2 - right, border, width * 2, height);
+
+        if (GUI.Button(_buttonArea, "", _areaStyle))
         {
             _enabled = !_enabled;
             _draw.Enabled = !_enabled;
@@ -134,9 +157,31 @@ public class Eraser : MonoBehaviour {
             }
         }
 
-        GUI.Box(new Rect(Screen.width - width * 2 - right + 1, border + 1, width - 2, height - 2), "Rubber", _enabled? _selectedStyle : _optionStyle);
+        Rect eraserRect = new Rect(Screen.width - width * 2 - right + 1, border + 1, width - 2, height - 2);
+        Rect pencilRect = new Rect(Screen.width - width - right + 1, border + 1, width - 2, height - 2);
 
-        GUI.Box(new Rect(Screen.width - width - right + 1, border + 1, width - 2, height - 2), "Pencil", _enabled ? _optionStyle : _selectedStyle);
+        if (_enabled)
+        {
+            GUI.Box(eraserRect, "", _selectedStyle);
+            GUI.Box(pencilRect, "", _optionStyle);
+
+            GUI.color = Color.white;
+            GUI.Box(eraserRect, _rubberTex, _texStyle);
+            GUI.color = Utils.ColorFromRGBA(46, 52, 54);
+            GUI.Box(pencilRect, _pencilTex, _texStyle);
+            GUI.color = Color.white;
+        }
+        else
+        {
+            GUI.Box(eraserRect, "", _optionStyle);
+            GUI.Box(pencilRect, "", _selectedStyle);
+
+            GUI.color = Utils.ColorFromRGBA(46, 52, 54);
+            GUI.Box(eraserRect, _rubberTex, _texStyle);
+            GUI.color = Color.white;
+            GUI.Box(pencilRect, _pencilTex, _texStyle);
+            GUI.color = Color.white;
+        }
     }
 
     public static bool LineSegmentsIntersection(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, out Vector2 intersection)

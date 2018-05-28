@@ -22,6 +22,7 @@ public class Utils : MonoBehaviour
     private SliceLoader _loader;
     private Slicer _slicer;
     private StructuresList _sList;
+    private Eraser _eraser;
 
     private float _timeInterval = 0.1f; // in seconds
 
@@ -47,6 +48,7 @@ public class Utils : MonoBehaviour
         _loader = GetComponent<SliceLoader>();
         _slicer = GetComponent<Slicer>();
         _sList = GetComponent<StructuresList>();
+        _eraser = GetComponent<Eraser>();
 
         _mouseHistory = new List<MouseSnapshot>();
         _mouseVelocity = Vector2.zero;
@@ -106,7 +108,7 @@ public class Utils : MonoBehaviour
     {
         Vector3 mouseToGUI = new Vector2(mousePosition.x, Screen.height - mousePosition.y);
 
-        return _instance._slicer.SliderArea.Contains(mouseToGUI) || _instance._sList.SliderArea.Contains(mouseToGUI);
+        return _instance._slicer.SliderArea.Contains(mouseToGUI) || _instance._sList.SliderArea.Contains(mouseToGUI) || _instance._eraser.ButtonArea.Contains(mouseToGUI);
     }
 
     public static Texture2D CreateColorTexture(int r, int g, int b, int a = 255)
