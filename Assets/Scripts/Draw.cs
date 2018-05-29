@@ -100,7 +100,7 @@ public class Draw : MonoBehaviour {
                     {
                         Vector3[] positions = new Vector3[_currentLine.positionCount];
                         _currentLine.GetPositions(positions);
-                        _assnetwork.broadcastLine("", _slicer.Slice, _currentVolume, positions);
+                        _assnetwork.broadcastLine(_currentLine.name, _slicer.Slice, _currentVolume, positions);
                     }
                 }
             }
@@ -129,10 +129,10 @@ public class Draw : MonoBehaviour {
 
     }
 
-    internal void AddLine(string userID, int slice, string structure, Vector3[] line)
+    internal void AddLine(string lineID, int slice, string structure, Vector3[] line)
     {
         // create line
-        LineRenderer lr = CreateLine(structure);
+        LineRenderer lr = CreateLine(structure, lineID);
 
         // add points
         foreach (Vector3 p in line)
@@ -168,7 +168,7 @@ public class Draw : MonoBehaviour {
 
             if (CheckTolerance(localPoint, localStartingPoint))
             {
-                _currentLine = CreateLine(_currentVolume);
+                _currentLine = CreateLine(_currentVolume, GenerateID());
 
                 AddPoint(localStartingPoint, _currentLine, _currentVolume);
                 AddPoint(localPoint, _currentLine, _currentVolume);
@@ -201,7 +201,7 @@ public class Draw : MonoBehaviour {
         _drawing = true;
     }
 
-    private LineRenderer CreateLine(string volumeName)
+    private LineRenderer CreateLine(string volumeName, string lineID)
     {
         string fullLinesName = volumeName + "Lines";
 
@@ -215,7 +215,7 @@ public class Draw : MonoBehaviour {
         }
 
         GameObject go = Instantiate(Resources.Load("Prefabs/Line", typeof(GameObject))) as GameObject;
-        go.name = GenerateID();
+        go.name = lineID;
         go.tag = "DrawLine";
         go.transform.parent = parent.transform;
         go.transform.localPosition = Vector3.zero;

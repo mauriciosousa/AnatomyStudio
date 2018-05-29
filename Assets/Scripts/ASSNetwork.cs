@@ -72,14 +72,27 @@ public class ASSNetwork : MonoBehaviour {
     }
 
     [RPC]
-    void RPC_broadcastLine(string userID, int slice, string structure, Vector3[] line)
+    void RPC_broadcastLine(string lineID, int slice, string structure, Vector3[] line)
     {
-        _draw.AddLine(userID, slice, structure, line);
+        _draw.AddLine(lineID, slice, structure, line);
     }
-    public void broadcastLine(string userID, int slice, string structure, Vector3[] line)
+    public void broadcastLine(string lineID, int slice, string structure, Vector3[] line)
     {
         if(Network.peerType != NetworkPeerType.Disconnected)
-            _networkView.RPC("RPC_broadcastLine", RPCMode.Others, userID, slice, structure, line);
+            _networkView.RPC("RPC_broadcastLine", RPCMode.Others, lineID, slice, structure, line);
+    }
+
+    [RPC]
+    void RPC_eraseLine(string lineID)
+    {
+        GameObject line = GameObject.Find(lineID);
+        if (line != null)
+            _draw.RemoveLine(line);
+    }
+    public void eraseLine(string lineID)
+    {
+        if (Network.peerType != NetworkPeerType.Disconnected)
+            _networkView.RPC("RPC_eraseLine", RPCMode.Others, lineID);
     }
 
 }

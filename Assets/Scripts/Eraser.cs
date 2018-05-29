@@ -5,6 +5,7 @@ using UnityEngine;
 public class Eraser : MonoBehaviour {
 
     private Draw _draw;
+    private ASSNetwork _assnetwork;
 
     private bool _enabled;
     private bool _erasing;
@@ -34,6 +35,8 @@ public class Eraser : MonoBehaviour {
     void Start ()
     {
         _draw = GetComponent<Draw>();
+        _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
+
         _enabled = false;
         _erasing = false;
 
@@ -69,6 +72,8 @@ public class Eraser : MonoBehaviour {
                 {
                     _erasing = true;
                     mouseA = Utils.MouseToWorld(Input.mousePosition);
+
+                    _lines = GameObject.FindGameObjectsWithTag("DrawLine");
                 }
             }
         }
@@ -101,6 +106,7 @@ public class Eraser : MonoBehaviour {
                                     Vector2 intersection;
                                     if (LineSegmentsIntersection(localMouseA, localMouseB, points[i], points[i - 1], out intersection))
                                     {
+                                        _assnetwork.eraseLine(go.name);
                                         _draw.RemoveLine(go);
                                         break;
                                     }
@@ -122,11 +128,7 @@ public class Eraser : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.D))
         {
             _enabled = !_enabled;
-
-            if (_enabled)
-            {
-                _lines = GameObject.FindGameObjectsWithTag("DrawLine");
-            }
+            _draw.Enabled = !_enabled;
         }
 
         // test intersection
@@ -150,11 +152,6 @@ public class Eraser : MonoBehaviour {
         {
             _enabled = !_enabled;
             _draw.Enabled = !_enabled;
-
-            if (_enabled)
-            {
-                _lines = GameObject.FindGameObjectsWithTag("DrawLine");
-            }
         }
 
         Rect eraserRect = new Rect(Screen.width - width * 2 - right + 1, border + 1, width - 2, height - 2);
