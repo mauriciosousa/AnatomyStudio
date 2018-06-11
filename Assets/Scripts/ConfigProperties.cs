@@ -80,6 +80,14 @@ public class ConfigProperties : MonoBehaviour {
         }
     }
 
+    public string storageDataFile
+    {
+        get
+        {
+            return _load("storage.file");
+        }
+    }
+
     private string _load(string property)
     {
         if (File.Exists(configFilenameFullPath))

@@ -131,6 +131,8 @@ public class Draw : MonoBehaviour {
 
     internal void AddLine(string lineID, int slice, string structure, Vector3[] line)
     {
+        if (GameObject.Find(lineID) != null) return; 
+
         // create line
         LineRenderer lr = CreateLine(structure, lineID);
 

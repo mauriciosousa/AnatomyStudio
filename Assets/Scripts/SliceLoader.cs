@@ -34,6 +34,14 @@ public class SliceLoader : MonoBehaviour {
     private int _currentSlice;
     private string _slicesPath;
     private string _slicesHttp;
+    public string SlicesHTTP
+    {
+        get
+        {
+            return _slicesHttp;
+        }
+    }
+
     private FileInfo[] _filesInfo;
     private bool _refreshAspect;
 
@@ -150,6 +158,8 @@ public class SliceLoader : MonoBehaviour {
                             _main.resizeOrtographicCamera();
                             ResizeTabletopSurface();
                             ResizeSliceIndicator();
+
+                            GetComponent<Storage>().Load();
 
                             _refreshAspect = false;
                         }
