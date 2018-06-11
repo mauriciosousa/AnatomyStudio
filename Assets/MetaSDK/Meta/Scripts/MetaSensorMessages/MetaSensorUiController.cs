@@ -130,7 +130,6 @@ namespace Meta
         private MetaSensorMessageController CreateMessageUi()
         {
             GameObject ui = (GameObject)GameObject.Instantiate(Resources.Load(SensorFailurePrefabName));
-            ui.hideFlags = HideFlags.HideAndDontSave;
             return ui.GetComponent<MetaSensorMessageController>();
         }
 

@@ -40,7 +40,7 @@ namespace Meta.Interop
         #region C API Data structures
         public enum InitStatus
         {
-            NO_ERROR = 0,
+            SUCCESS = 0,
             FILE_NOT_FOUND,
             FILE_ERROR,
             INVALID_CONFIGURATIONS
@@ -98,23 +98,79 @@ namespace Meta.Interop
             public int num_points;
             public IntPtr points;
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MetaPolyCameraParams
+        {
+            public float fx;
+            public float fy;
+            public float cx;
+            public float cy;
+            public float k1;
+            public float k2;
+            public float k3;
+        }
+
+        /// Coordinate frames for retrieving transforms
+        public enum MetaCoordinateFrame
+        {
+            WORLD = 0,
+            DEVICE_ORIGIN = 1,
+            RGB = 2,
+            DEPTH = 3
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MetaMatrix44
+        {
+            public float m00; // float[4][4]
+            public float m01;
+            public float m02;
+            public float m03;
+            public float m10;
+            public float m11;
+            public float m12;
+            public float m13;
+            public float m20;
+            public float m21;
+            public float m22;
+            public float m23;
+            public float m30;
+            public float m31;
+            public float m32;
+            public float m33;
+        } 
+
         #endregion
 
         #region C API Methods
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
         public static extern int meta_get_frame_hands(byte[] buffer);
 
+        /// <summary>
+        /// Gets a transform between two MetaCoordinateFrame enum types.
+        /// Returns a transform from source to destination.
+        /// </summary>
+        /// <param name="destination_frame"></param>
+        /// <param name="source_frame"></param>
+        /// <param name="matrix"></param>
+        /// <returns>false if transform not available or calibration not loaded</returns>
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool meta_get_pose(string source_frame, string target_frame, byte[] buffer);
+        public static extern bool meta_get_transform(MetaCoordinateFrame destination_frame,
+                                                     MetaCoordinateFrame source_frame,
+                                                     ref MetaMatrix44 matrix);
 
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
         public static extern MetaPose meta_get_latest_head_pose();
 
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
+        public static extern InitStatus meta_start();
+
+        [DllImport(Interop.DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
         public static extern InitStatus meta_init(string config_file, bool is_development_environment);
 
-        [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void meta_start(bool profile);
+        [DllImport(Interop.DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void meta_start_application(bool profile);
 
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
         public static extern void meta_wait_start_complete();
@@ -133,14 +189,6 @@ namespace Meta.Interop
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
         public static extern bool meta_update_attribute(string task, string attribute, string value);
 
-
-        /// <summary>
-        /// Enable or disable rgb stream
-        /// </summary>
-        /// <param name="enable">whether we should enable or disable</param>
-        [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void meta_enable_rgb_stream(bool enable);
-
         ///<summary>
         ///Gets RGB data and writes to the given ptr.
         ///</summary>
@@ -149,11 +197,36 @@ namespace Meta.Interop
         ///<param name="rotation">The rotation with which we should render virtual conent</param>
         // allocated by Marshal class.</param>
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void meta_get_rgb_frame(IntPtr buffer, [MarshalAs(UnmanagedType.LPArray, SizeConst = 3)] double[] translation,
-                                                      [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] double[] rotation);
+        public static extern void meta_get_rgb_frame(IntPtr buffer,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 3)] double[] translation,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] double[] rotation);
+
+        /// <summary>
+        /// Get camera intrinsics for the RGB camera
+        /// </summary>
+        /// <param name="camera_params">ref to struct to be filled with params</param>
+        /// <returns>false if calibration is not ready</returns>
+        [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool meta_get_rgb_intrinsics(ref MetaPolyCameraParams camera_params);
+
+
+        /// <summary>
+        /// Get Point cloud and depth camera to world transform
+        /// Transform is a time corrected transform from depth to world
+        /// </summary>
+        /// <param name="point_cloud">Point cloud</param>
+        /// <param name="translation">translation of the depth sensor in world frame</param>
+        /// <param name="rotation">rotation of the depth sensor in world frame</param>
+        [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void meta_get_point_cloud( ref MetaPointCloud point_cloud,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 3)] double[] translation,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] double[] rotation);
+
 
         [DllImport(DllReferences.MetaCore, CallingConvention = CallingConvention.Cdecl)]
         public static extern bool get_meta_variable(MetaVariable variableId, [MarshalAs(UnmanagedType.BStr), Out] out string result);
+
+
 
         #endregion
 

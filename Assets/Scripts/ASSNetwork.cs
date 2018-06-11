@@ -20,6 +20,7 @@ public class ASSNetwork : MonoBehaviour {
     public bool showGUI = false;
 
     private Draw _draw;
+    private Slicer _slicer;
 
     void Start()
     {
@@ -27,6 +28,7 @@ public class ASSNetwork : MonoBehaviour {
         _networkView = GetComponent<NetworkView>();
         _config = GameObject.Find("Main").GetComponent<ConfigProperties>();
         _draw = GameObject.Find("Main").GetComponent<Draw>();
+        _slicer = GameObject.Find("Main").GetComponent<Slicer>();
 
         port = _config.port;
         serverAddress = _config.address;
@@ -95,4 +97,17 @@ public class ASSNetwork : MonoBehaviour {
             _networkView.RPC("RPC_eraseLine", RPCMode.Others, lineID);
     }
 
+    [RPC]
+    void RPC_setSlice(string clientID, int slice)
+    {
+        // if(clientID...) CHECK CORRECT CLIENT ID
+        {
+            _slicer.Slice = slice;
+        }
+    }
+    public void setSlice(string clientID, int slice)
+    {
+        if (Network.peerType != NetworkPeerType.Disconnected)
+            _networkView.RPC("RPC_setSlice", RPCMode.Others, clientID, slice);
+    }
 }

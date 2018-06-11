@@ -93,7 +93,8 @@ public class Utils : MonoBehaviour
 
     public static Vector3 MouseToWorld(Vector2 mousePosition)
     {
-        Plane plane = new Plane(Camera.main.transform.forward, _instance._loader.slice.transform.position);
+        // o valor adicional na posição do plano é para garantir que as linhas (e outras interações) estão à frente da slice
+        Plane plane = new Plane(Camera.main.transform.forward, _instance._loader.slice.transform.position - Camera.main.transform.forward * (_instance._loader.SliceDepth * 0.1f));
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
         float hitDistance;

@@ -22,21 +22,33 @@ public class Main : MonoBehaviour {
     public GameObject mainCamera;
     public GameObject metaCamera;
 
+    private GameObject _slice;
+
     public List<GameObject> metaObjects;
 
-	// Use this for initialization
-	void Start ()
+    private GameObject _translationHandle;
+    private GameObject _rotationHandle;
+
+    // Use this for initialization
+    void Start ()
     {
         _slicer = GetComponent<Slicer>();
         _loader = GetComponent<SliceLoader>();
         _config = GetComponent<ConfigProperties>();
         deviceType = _config.device;
 
+        _slice = GameObject.Find("Slice");
+
+        _translationHandle = GameObject.Find("TranslationHandle");
+        _rotationHandle = GameObject.Find("RotationHandle");
+
         // hide / show objects
         if (deviceType == DeviceType.Meta || deviceType == DeviceType.Desktop)
         {
             foreach (GameObject go in metaObjects)
                 go.SetActive(true);
+
+            _slice.SetActive(false);
         }
         else
         {
@@ -81,7 +93,17 @@ public class Main : MonoBehaviour {
 	void Update ()
     {
         if (deviceType == DeviceType.Tablet)
+        {
             updateOrtographicCamera();
+        }
+        else if (deviceType == DeviceType.Meta)
+        {
+            if(Input.GetKeyDown(KeyCode.C))
+            {
+                _translationHandle.SetActive(!_translationHandle.activeSelf);
+                _rotationHandle.SetActive(!_rotationHandle.activeSelf);
+            }
+        }
     }
 
     public void resizeOrtographicCamera()

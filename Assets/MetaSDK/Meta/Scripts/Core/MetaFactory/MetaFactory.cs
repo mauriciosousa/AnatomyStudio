@@ -51,7 +51,6 @@ namespace Meta
             ConstructEnvironmentServices(package);  // Environment variables
             ConstructLocalization(package);         // Head tracking
             ConstructHands(package);                // Hand tracking
-            ConstructNodeLoader(package);           // Intrinsics and extrinsics of cameras + nodes on headset
             ConstructAlignmentHandler(package);     // Eye alignment ?
 
             ConstructButtonEventProvider(package);
@@ -81,17 +80,6 @@ namespace Meta
             AlignmentHandler alignmentHandler = new AlignmentHandler();
             package.EventReceivers.Add(alignmentHandler);
             package.MetaContext.Add(alignmentHandler);
-        }
-
-        /// <summary>
-        /// Constructs the calibration parameters object.
-        /// No calibration data is guaranteed until the DLL which supplies the data does.
-        /// </summary>
-        private void ConstructNodeLoader(MetaFactoryPackage package)
-        {
-            NodeLoaderModule pars = new NodeLoaderModule(new NodeLoaderApiProcessor());
-            package.MetaContext.Add(pars);
-            package.EventReceivers.Add(pars);
         }
 
         private void ConstructMetaSdkAnalytics(MetaFactoryPackage package)

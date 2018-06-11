@@ -41,8 +41,8 @@ namespace Meta.Plugin
     /// TODO: 
     /// </summary>
     /// <remarks>
-    // <para>Notes</para>
-    ///</remarks>
+    /// <para>Notes</para>
+    /// </remarks>
     public class SlamApi
     {
         /// <summary>
@@ -54,75 +54,14 @@ namespace Meta.Plugin
         /// </summary>
         private double[] _quat = new double[4];
 
-        private bool _hasRelocalized = false;
-
         private bool _rotationOnlyTracking = false;
 
         private MetaCompositor _compositor;
 
         /// <summary>
-        ///  SLAM localizer state.
-        /// </summary>
-        /// <remarks>
-        /// atStart:
-        /// wait
-        /// </remarks>
-        public enum SLAMLocalizerState
-        {
-            atStart, // When Unity starts or you lost localization long enough that it is restarting.
-            waitIMU, // Waiting for good IMU data, only should happen at the very start unless IMU drops
-            inError, // Error states other than just not localizing, see their error codes
-            inTracking, // SLAM is tracking
-            inRelocalization // While SLAM has lost localization
-        };
-
-        /// <summary>
-        /// Current SLAM localizer state.
-        /// </summary>
-        private SLAMLocalizerState _state = SLAMLocalizerState.atStart;
-
-        /// <summary>
-        /// Returns true when SLAM has had enough time to fully relocalize.
-        /// </summary>
-        public bool LocalizationDone
-        {
-            get
-            {
-                return _hasRelocalized;
-            }
-        }
-
-        // Externally set GameObjects and Images
-
-        /// <summary>
-        /// Direction of gravity in world coordinates.  For debugging purposes.
+        /// Game object to apply poses to 
         /// </summary>
         private GameObject targetGO = null; // Target game object
-
-        // ---------------- Accessors ----------------------
-
-        /// <summary>
-        /// Return current state to caller.
-        /// </summary>
-        public SLAMLocalizerState State
-        {
-            get
-            {
-                return _state;
-            }
-        }
-
-        /// <summary>
-        /// Are we tracking state yet?  Do not track until can latch
-        /// IMU values AND SLAM is tracking.
-        /// </summary>
-        public bool AreTracking
-        {
-            get
-            {
-                return _state == SLAMLocalizerState.inTracking;
-            }
-        }
 
         public GameObject TargetGO
         {
@@ -144,19 +83,18 @@ namespace Meta.Plugin
         }
 
         /// <summary>Internal update method that can be used for all specializations of the SLAM localizer.</summary>
-        virtual public void Update(bool isScaleEstimated, bool fromCompositor)
+        virtual public void Update(bool fromCompositor)
         {
-            UpdateTargetGOTransform(isScaleEstimated, fromCompositor);
+            UpdateTargetGOTransform(fromCompositor);
         }
 
-        public void GetSlamFeedback(out SlamInterop.TrackingFeedback feedback)
+        public void GetTrackingStatus(out SlamInterop.TrackingStatus feedback)
         {
-            feedback = SlamInterop.GetTrackingFeedback();
+            feedback = SlamInterop.GetTrackingStatus();
         }
 
         public void SaveSlamMap(string mapname)
         {
-            // save as .mmf (meta map file)
             SlamInterop.SaveMap(mapname + ".mmf");
         }
 
@@ -170,7 +108,7 @@ namespace Meta.Plugin
         /// SLAM Reports its transfrom aligned with gravity on (0,-9.8,0)
         /// At the origin with the initial rotation at Identity
         /// </summary>
-        public void UpdateTargetGOTransform(bool isScaleEstimated, bool getPoseFromCompositor)
+        public void UpdateTargetGOTransform(bool getPoseFromCompositor)
         {
             if (getPoseFromCompositor)
             {
@@ -202,13 +140,9 @@ namespace Meta.Plugin
             }
         }
 
-        // To reset the IMU to bring the unity world back to horizontal direction (Will be deprecated once the modeling of the Glasses is fixed)
         virtual public void ResetLocalizer()
         {
             SlamInterop.ResetSLAM();
-
-            _state = SLAMLocalizerState.atStart;
-            _hasRelocalized = false;
         }
 
         public void ToggleRotationOnlyTracking()

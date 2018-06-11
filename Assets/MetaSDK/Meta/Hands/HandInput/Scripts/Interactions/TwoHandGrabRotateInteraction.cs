@@ -43,13 +43,13 @@ namespace Meta
         protected override void Engage()
         {
             _priorDirection = SecondGrabbingHand.transform.position - FirstGrabbingHand.transform.position;
-            SetIsKinematic(true);
+            PrepareRigidbodyForInteraction();
             base.Engage();
         }
 
         protected override void Disengage()
         {
-            SetIsKinematic(false);
+            RestoreRigidbodySettingsAfterInteraction();
             base.Disengage();
         }
 

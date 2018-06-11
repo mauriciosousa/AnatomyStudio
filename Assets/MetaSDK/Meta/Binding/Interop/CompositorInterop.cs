@@ -141,6 +141,20 @@ namespace Meta.Interop
         [DllImport(DllReferences.MetaUnity, EntryPoint = "SetSystemLatency")]
         public static extern void SetSystemLatency(float dt);
 
+        /// <summary>
+        /// Enable/disable the Virtual Webcam.
+        /// </summary>
+        /// <param name="enable">bool for enable/disable</param>
+        [DllImport(DllReferences.MetaUnity, EntryPoint = "EnableWebcam")]
+        public static extern void EnableWebcam(bool enable);
+
+        /// <summary>
+        /// Enable/disable the Virtual Webcam.
+        /// </summary>
+        /// <param name="enable">bool for enable/disable</param>
+        [DllImport(DllReferences.MetaUnity, EntryPoint = "SetWebcamFovDegrees")]
+        public static extern void SetWebcamFovDegrees(float fovDegrees);
+
         [DllImport(DllReferences.MetaUnity, EntryPoint = "GetEyeRenderTargetWidth")]
         public static extern int GetEyeRenderTargetWidth();
 
@@ -260,5 +274,21 @@ namespace Meta.Interop
         /// <returns>Whether the operation succeeded</returns>
         [DllImport(DllReferences.MetaUnity, EntryPoint = "SetCameraFarPlane")]
         public static extern bool SetCameraFarPlane(float farPlane);
+
+        /// <summary>
+        /// Get view matrix for camera
+        /// </summary>
+        /// <returns>Render function</returns>
+        [DllImport(DllReferences.MetaUnity, EntryPoint = "GetWebcamViewMatrix")]
+        public static extern void getWebcamViewMatrix(ref IntPtr ptrResultViewMatrix);
+
+
+        /// <summary>
+        /// Set the webcam render target from an external engine
+        /// </summary>
+        /// <param name="texturePtr"></param>
+        [DllImport(DllReferences.MetaUnity, EntryPoint = "SetWebcamHologramTargetTexture")]
+        public static extern void SetWebcamRenderTarget(
+            IntPtr texturePtr, IntPtr depthTexturePtr);
     }
 }

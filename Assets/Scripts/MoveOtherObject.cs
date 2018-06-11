@@ -21,4 +21,10 @@ public class MoveOtherObject : MonoBehaviour {
 
         _lastPos = transform.position;
     }
+
+    public void SetPosition(Vector3 position)
+    {
+        transform.position = position;
+        _lastPos = position;
+    }
 }

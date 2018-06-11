@@ -29,6 +29,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using Meta.Audio;
 using UnityEngine;
+using System.Linq;
 
 namespace Meta.HandInput
 {
@@ -62,15 +63,17 @@ namespace Meta.HandInput
         [SerializeField]
         private AudioRandomizer _releaseAudio;
 
+        private const int ColliderBufferSize = 16;
+        private readonly Collider[] _buffer = new Collider[ColliderBufferSize];
 
         private Hand _hand;
         private AudioSource _audioSource;
+        private HandsProvider.Settings _handSettings;
         private SpriteRenderer _centerOutOfBoundsSpriteRenderer;
         private CenterHandFeature _centerHandFeature;
         private Transform _centerOutOfBoundsSprite;
         private Transform _headsetTransform;
         private PalmState _lastPalmState = PalmState.Idle;
-        private bool _vicinityOn = false;
 
 
         public bool PlayAudio
@@ -124,6 +127,8 @@ namespace Meta.HandInput
             _idleContactSprite.enabled = false;
             _hoverSprite.enabled = false;
             _grabSprite.enabled = false;
+
+            _handSettings = FindObjectOfType<HandsProvider>().settings;
         }
 
         private void LateUpdate()
@@ -170,8 +175,7 @@ namespace Meta.HandInput
             {
                 return;
             }
-
-            //bool vicinityTargetState = false;
+           
             if (_centerHandFeature.PalmState != _lastPalmState)
             {
                 switch (_centerHandFeature.PalmState)
@@ -198,22 +202,66 @@ namespace Meta.HandInput
                         break;
                 }
             }
-            if ((_centerHandFeature.NearObjects.Count != 0) ^ _vicinityOn)
+
+            if (_centerHandFeature.PalmState == PalmState.Idle)
             {
-                _vicinityOn = !_vicinityOn;
-                if (_vicinityOn && _centerHandFeature.PalmState == PalmState.Idle)
+                if (_centerHandFeature.NearObjects.Count != 0)
                 {
                     _idleSprite.enabled = false;
                     _idleContactSprite.enabled = true;
                 }
-                if (!_vicinityOn && _centerHandFeature.PalmState == PalmState.Idle)
+                else if (CheckHandInFrontOfInteractionObject())
+                {
+                    _idleSprite.enabled = true;
+                    _idleContactSprite.enabled = false;
+                }
+                else
                 {
                     _idleSprite.enabled = false;
                     _idleContactSprite.enabled = false;
                 }
             }
 
+
             _lastPalmState = _centerHandFeature.PalmState;
+        }
+
+
+        /// <summary>
+        /// Checks for nearby objects that are in front of the user's hand.
+        /// </summary>
+        /// <returns> Whether there's an object in front of the user's hand. </returns>
+        private bool CheckHandInFrontOfInteractionObject()
+        {
+            var headToHandDirection = (transform.position - Camera.main.transform.position).normalized;
+
+            float kSearchRadius = _idleSprite.enabled ? 0.425f : 0.4f; // Spherecast search radius.
+            var nearColCount = Physics.OverlapSphereNonAlloc(transform.position, kSearchRadius, _buffer, _handSettings.QueryLayerMask, _handSettings.QueryTriggers);
+
+            for (int i = 0; i < nearColCount; i++)
+            {
+                var nearCollider = _buffer[i];
+
+                // Skip object if it does not have at least one active Interaction attached to it or an ancestor
+                Interaction[] attachedInteractions = nearCollider.GetComponentsInParent<Interaction>();
+                if (attachedInteractions.Length == 0 || attachedInteractions.All(attachedInteraction => !attachedInteraction.enabled))
+                {
+                    continue;
+                }
+
+                var nearPoint = nearCollider.ClosestPoint(transform.position);
+                var objectToHandDirection = (transform.position - nearPoint).normalized;
+
+                var dotWithForward = Vector3.Dot(objectToHandDirection, headToHandDirection);
+
+                float dotProductThreshold = _idleSprite.enabled ? -0.6f : -0.65f; // Max dot product value, 
+                if (dotWithForward < dotProductThreshold)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void OnGrab(HandFeature handFeature)

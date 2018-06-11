@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class Eraser : MonoBehaviour {
 
+    private Main _main;
     private Draw _draw;
+    private SliceLoader _loader;
     private ASSNetwork _assnetwork;
 
     private bool _enabled;
@@ -34,7 +36,9 @@ public class Eraser : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
+        _main = GetComponent<Main>();
         _draw = GetComponent<Draw>();
+        _loader = GetComponent<SliceLoader>();
         _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
 
         _enabled = false;
@@ -64,120 +68,131 @@ public class Eraser : MonoBehaviour {
 	// Update is called once per frame
 	void Update ()
     {
-        if(Input.GetMouseButtonDown(0))
+        if (_main.deviceType == DeviceType.Tablet)
         {
-            if (_enabled)
+            if (Input.GetMouseButtonDown(0))
             {
-                if (!Utils.GUIContains(Input.mousePosition))
+                if (_enabled)
                 {
-                    _erasing = true;
-                    mouseA = Utils.MouseToWorld(Input.mousePosition);
-
-                    _lines = GameObject.FindGameObjectsWithTag("DrawLine");
-                }
-            }
-        }
-		else if(Input.GetMouseButton(0))
-        {
-            if(_erasing)
-            {
-                Vector3 mouseB = Utils.MouseToWorld(Input.mousePosition);
-
-                if (mouseA != mouseB)
-                {
-                    if (_draw.CheckTolerance(mouseA, mouseB))
+                    if (!Utils.GUIContains(Input.mousePosition))
                     {
-                        foreach (GameObject go in _lines)
-                        {
-                            if (go != null)
-                            {
-                                LineRenderer lr = go.GetComponent<LineRenderer>();
-                                Vector3[] points = new Vector3[lr.positionCount];
-                                lr.GetPositions(points);
+                        _erasing = true;
+                        mouseA = Utils.MouseToWorld(Input.mousePosition);
 
-                                Vector3 localMouseA = go.transform.worldToLocalMatrix.MultiplyPoint(mouseA);
-                                Vector3 localMouseB = go.transform.worldToLocalMatrix.MultiplyPoint(mouseB);
-
-                                for (int i = 1; i < lr.positionCount; i++)
-                                {
-                                    // check if same slice
-                                    if (localMouseA.z != points[i].z) break;
-
-                                    Vector2 intersection;
-                                    if (LineSegmentsIntersection(localMouseA, localMouseB, points[i], points[i - 1], out intersection))
-                                    {
-                                        _assnetwork.eraseLine(go.name);
-                                        _draw.RemoveLine(go);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        mouseA = mouseB;
+                        _lines = GameObject.FindGameObjectsWithTag("DrawLine");
                     }
                 }
             }
-        }
-        else if(Input.GetMouseButtonUp(0))
-        {
-            _erasing = false;
-        }
+            else if (Input.GetMouseButton(0))
+            {
+                if (_erasing)
+                {
+                    Vector3 mouseB = Utils.MouseToWorld(Input.mousePosition);
 
-        // test Disable
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            _enabled = !_enabled;
-            _draw.Enabled = !_enabled;
-        }
+                    if (mouseA != mouseB)
+                    {
+                        if (_draw.CheckTolerance(mouseA, mouseB))
+                        {
+                            foreach (GameObject go in _lines)
+                            {
+                                if (go != null)
+                                {
+                                    LineRenderer lr = go.GetComponent<LineRenderer>();
+                                    Vector3[] points = new Vector3[lr.positionCount];
+                                    lr.GetPositions(points);
 
-        // test intersection
-        if (Input.GetKeyDown(KeyCode.I))
-        {
-            Vector2 i;
-            print(LineSegmentsIntersection(new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 1), new Vector2(1, 0), out i));
+                                    Vector3 localMouseA = go.transform.worldToLocalMatrix.MultiplyPoint(mouseA);
+                                    Vector3 localMouseB = go.transform.worldToLocalMatrix.MultiplyPoint(mouseB);
+
+                                    for (int i = 1; i < lr.positionCount; i++)
+                                    {
+                                        // check if same slice
+                                        if (Mathf.RoundToInt(localMouseA.z / _loader.SliceDepth) != Mathf.RoundToInt(points[i].z / _loader.SliceDepth))
+                                        {
+                                            print("mouse: " + localMouseA.z);
+                                            print("point: " + points[i].z);
+                                            break;
+                                        }
+
+                                        Vector2 intersection;
+                                        if (LineSegmentsIntersection(localMouseA, localMouseB, points[i], points[i - 1], out intersection))
+                                        {
+                                            _assnetwork.eraseLine(go.name);
+                                            _draw.RemoveLine(go);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            mouseA = mouseB;
+                        }
+                    }
+                }
+            }
+            else if (Input.GetMouseButtonUp(0))
+            {
+                _erasing = false;
+            }
+
+            // test Disable
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                _enabled = !_enabled;
+                _draw.Enabled = !_enabled;
+            }
+
+            // test intersection
+            if (Input.GetKeyDown(KeyCode.I))
+            {
+                Vector2 i;
+                print(LineSegmentsIntersection(new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 1), new Vector2(1, 0), out i));
+            }
         }
     }
 
     void OnGUI()
     {
-        int border = 20;
-        int right = 150 + border;
-        int height = 40;
-        int width = 50;
-
-        _buttonArea = new Rect(Screen.width - width * 2 - right, border, width * 2, height);
-
-        if (GUI.Button(_buttonArea, "", _areaStyle))
+        if (_main.deviceType == DeviceType.Tablet)
         {
-            _enabled = !_enabled;
-            _draw.Enabled = !_enabled;
-        }
+            int border = 20;
+            int right = 150 + border;
+            int height = 40;
+            int width = 50;
 
-        Rect eraserRect = new Rect(Screen.width - width * 2 - right + 1, border + 1, width - 2, height - 2);
-        Rect pencilRect = new Rect(Screen.width - width - right + 1, border + 1, width - 2, height - 2);
+            _buttonArea = new Rect(Screen.width - width * 2 - right, border, width * 2, height);
 
-        if (_enabled)
-        {
-            GUI.Box(eraserRect, "", _selectedStyle);
-            GUI.Box(pencilRect, "", _optionStyle);
+            if (GUI.Button(_buttonArea, "", _areaStyle))
+            {
+                _enabled = !_enabled;
+                _draw.Enabled = !_enabled;
+            }
 
-            GUI.color = Color.white;
-            GUI.Box(eraserRect, _rubberTex, _texStyle);
-            GUI.color = Utils.ColorFromRGBA(46, 52, 54);
-            GUI.Box(pencilRect, _pencilTex, _texStyle);
-            GUI.color = Color.white;
-        }
-        else
-        {
-            GUI.Box(eraserRect, "", _optionStyle);
-            GUI.Box(pencilRect, "", _selectedStyle);
+            Rect eraserRect = new Rect(Screen.width - width * 2 - right + 1, border + 1, width - 2, height - 2);
+            Rect pencilRect = new Rect(Screen.width - width - right + 1, border + 1, width - 2, height - 2);
 
-            GUI.color = Utils.ColorFromRGBA(46, 52, 54);
-            GUI.Box(eraserRect, _rubberTex, _texStyle);
-            GUI.color = Color.white;
-            GUI.Box(pencilRect, _pencilTex, _texStyle);
-            GUI.color = Color.white;
+            if (_enabled)
+            {
+                GUI.Box(eraserRect, "", _selectedStyle);
+                GUI.Box(pencilRect, "", _optionStyle);
+
+                GUI.color = Color.white;
+                GUI.Box(eraserRect, _rubberTex, _texStyle);
+                GUI.color = Utils.ColorFromRGBA(46, 52, 54);
+                GUI.Box(pencilRect, _pencilTex, _texStyle);
+                GUI.color = Color.white;
+            }
+            else
+            {
+                GUI.Box(eraserRect, "", _optionStyle);
+                GUI.Box(pencilRect, "", _selectedStyle);
+
+                GUI.color = Utils.ColorFromRGBA(46, 52, 54);
+                GUI.Box(eraserRect, _rubberTex, _texStyle);
+                GUI.color = Color.white;
+                GUI.Box(pencilRect, _pencilTex, _texStyle);
+                GUI.color = Color.white;
+            }
         }
     }
 

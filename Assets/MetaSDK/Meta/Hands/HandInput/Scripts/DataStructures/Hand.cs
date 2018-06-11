@@ -80,7 +80,7 @@ namespace Meta.HandInput
         }
 
         /// <summary>
-        /// Returns weather the hand is currently grabbing.
+        /// Returns whether the hand is currently grabbing.
         /// </summary>
         public bool IsGrabbing
         {

@@ -29,13 +29,14 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using NUnit.Framework;
 using System;
-using types.fbs;
 using MetaVariable = Meta.Interop.MetaCoreInterop.MetaVariable;
+using InitStatus = Meta.Interop.MetaCoreInterop.InitStatus;
+using Matrix4x4 = UnityEngine.Matrix4x4;
 
 namespace Meta.Tests.SystemApi
 {
     [TestFixture]
-    [Ignore("Interaction with CoCo at this point is broken in Unit Test")]
+    [Ignore("Hanging on meta core stop, need to investigate.")]
     public class CalibrationSystemApiTests
     {
         bool systemStarted = false;
@@ -56,15 +57,17 @@ namespace Meta.Tests.SystemApi
             systemStarted = true;
             string loadCalibDataAndSerialData =
                 Environment.ExpandEnvironmentVariables("%META_INTERNAL_CONFIG%") +
-                DllTools.DirSep() + "device" + DllTools.DirSep() + "calibration_data_integration_test.json";
-            systemStarted = Plugin.SystemApi.Start(loadCalibDataAndSerialData);
-
+                DllTools.DirSep() + "core_api" + DllTools.DirSep() + "integration_test.json";
+            var status = Interop.MetaCoreInterop.meta_init(loadCalibDataAndSerialData, true);
             // Abort test if system didn't start.
-            if (!systemStarted)
+            if (status != InitStatus.SUCCESS)
             {
                 Assert.Fail("System failed to start. ");
                 return;
             }
+
+            Interop.MetaCoreInterop.meta_start_application(false);
+            Interop.MetaCoreInterop.meta_wait_start_complete();
         }
 
 
@@ -95,76 +98,82 @@ namespace Meta.Tests.SystemApi
 
 
         [Test]
-        public void GetCalibrationString()
+        public void GetTransform()
         {
-            Meta.Plugin.NodeLoaderApiProcessor nodeLoaderApiProcessor = new Meta.Plugin.NodeLoaderApiProcessor();
+            var matrix = new Interop.MetaCoreInterop.MetaMatrix44();
+            var transform = Matrix4x4.identity;
 
-            UnityEngine.Matrix4x4 expectedPose = new UnityEngine.Matrix4x4();
+            int maxNumberAttempts = 100;
+            int numberOfAttempts = 0;
+            bool returnStatus = false;
 
-            expectedPose.m00 = 1.00000f;
-            expectedPose.m01 = 0.00049f;
-            expectedPose.m02 = -0.00142f;
-            expectedPose.m03 = -0.02710f;
+            while (!returnStatus && numberOfAttempts < maxNumberAttempts)
+            {
+                //returnStatus = Plugin.SystemApi.GetTransform(Interop.MetaCoreInterop.MetaCoordinateFrame.DEPTH,
+                //                                             Interop.MetaCoreInterop.MetaCoordinateFrame.RGB,
+                //                                             ref transform);
 
-            expectedPose.m10 = 0.00017f;
-            expectedPose.m11 = 0.90275f;
-            expectedPose.m12 = 0.43016f;
-            expectedPose.m13 = -0.03307f;
+                /// Need to use interop here as the values we are comparing are for the Right handed matrix
+                /// TODO: decide if we should just change expected
+                returnStatus = Interop.MetaCoreInterop.meta_get_transform(Interop.MetaCoreInterop.MetaCoordinateFrame.DEPTH,
+                                                                          Interop.MetaCoreInterop.MetaCoordinateFrame.RGB,
+                                                                          ref matrix);
 
-            expectedPose.m20 = 0.00149f;
-            expectedPose.m21 = -0.43016f;
-            expectedPose.m22 = 0.90275f;
-            expectedPose.m23 = 0.09777f;
+                numberOfAttempts++;
+            }
 
-            expectedPose.m30 = 0.00000f;
-            expectedPose.m31 = 0.00000f;
-            expectedPose.m32 = 0.00000f;
-            expectedPose.m33 = 1.00000f;
+            if ( !returnStatus )
+            {
+                UnityEngine.Debug.Log("failed to get transform");
+                Assert.Fail();
+            }
+
+            UnityEngine.Debug.Log(transform);
+
+            float expectedPositionX = -0.02749644f;
+            float expectedPositionY = 0.001773831f;
+            float expectedPositionZ = 0.001428126f;
 
 
-            var profiles = nodeLoaderApiProcessor.Load();
-            var relativePose = profiles["rgb"].RelativePose;
-            Assert.IsTrue((relativePose.inverse * expectedPose).isIdentity);
+            double delta = 0.00001;
+
+            Assert.AreEqual(expectedPositionX, matrix.m03, delta);
+            Assert.AreEqual(expectedPositionY, matrix.m13, delta);
+            Assert.AreEqual(expectedPositionZ, matrix.m23, delta);
         }
 
 
         [Test]
-        [Ignore("Get Pose is not stable. Race condition exists, where we can ask the data before its ready.")]
-        public void GetPose()
+        public void GetTransformBadFrames()
         {
-            const int kBuffMaxSize = 4000;
-            byte[] buffer = new byte[kBuffMaxSize];
-            PoseType poseType = new PoseType();
+            Matrix4x4 transform = Matrix4x4.identity;
 
-            Plugin.SystemApi.GetPose("depth", "rgb", ref buffer, out poseType);
+            int maxNumberAttempts = 100;
+            int numberOfAttempts = 0;
+            bool returnStatus = false;
 
-            double expectedPositionX = -0.02749644;
-            double expectedPositionY = 0.001773831;
-            double expectedPositionZ = 0.001428126;
+            while (!returnStatus && numberOfAttempts < maxNumberAttempts)
+            {
+                returnStatus = Plugin.SystemApi.GetTransform((Interop.MetaCoreInterop.MetaCoordinateFrame)(-1),
+                                                             (Interop.MetaCoreInterop.MetaCoordinateFrame)5,
+                                                             ref transform);
+                numberOfAttempts++;
+            }
 
-            Assert.AreEqual(expectedPositionX, poseType.Position.Value.X);
-            Assert.AreEqual(expectedPositionY, poseType.Position.Value.Y);
-            Assert.AreEqual(expectedPositionZ, poseType.Position.Value.Z);
-        }
+            if ( returnStatus )
+            {
+                Assert.Pass();
+            }
 
-
-        [Test]
-        [Ignore("Get Pose is not stable. Race condition exists, where we can ask the data before its ready.")]
-        public void GetPoseBadNodes()
-        {
-            const int kBuffMaxSize = 4000;
-            byte[] buffer = new byte[kBuffMaxSize];
-            PoseType poseType = new PoseType();
-
-            Plugin.SystemApi.GetPose("depth", "color", ref buffer, out poseType);
+            var position = transform.GetPosition();
 
             double expectedPositionX = 0.0;
             double expectedPositionY = 0.0;
             double expectedPositionZ = 0.0;
 
-            Assert.AreEqual(expectedPositionX, poseType.Position.Value.X);
-            Assert.AreEqual(expectedPositionY, poseType.Position.Value.Y);
-            Assert.AreEqual(expectedPositionZ, poseType.Position.Value.Z);
+            Assert.AreEqual(expectedPositionX, position.x);
+            Assert.AreEqual(expectedPositionY, position.y);
+            Assert.AreEqual(expectedPositionZ, position.z);
         }
     }
 
@@ -211,14 +220,15 @@ namespace Meta.Tests.SystemApi
 
         private static void GetPathTest(bool is_development_environment)
         {
-            bool systemStarted = Plugin.SystemApi.Start(loadCalibDataAndSerialData, is_development_environment);
-
+            var status = Interop.MetaCoreInterop.meta_init(loadCalibDataAndSerialData, is_development_environment);
             // Abort test if system didn't start.
-            if (!systemStarted)
+            if ( status != InitStatus.SUCCESS)
             {
                 Assert.Fail();
                 return;
             }
+
+            Interop.MetaCoreInterop.meta_start_application(false);
 
             MetaVariable[] variables =
                 new MetaVariable[] { MetaVariable.META_3RDPARTY, MetaVariable.META_APP_DATA, MetaVariable.META_BUILD,

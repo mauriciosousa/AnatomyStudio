@@ -52,6 +52,11 @@ namespace Meta
         bool IsFinished { get; }
 
         /// <summary>
+        /// Whether rotation only tracking is enabled
+        /// </summary>
+        bool RotationOnlyTrackingEnabled { get; }
+
+        /// <summary>
         /// Initializes the slam map creation process.
         /// </summary>
         void CreateSlamMap();

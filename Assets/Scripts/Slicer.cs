@@ -3,9 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Slicer : MonoBehaviour {
-
+public class Slicer : MonoBehaviour
+{
     private Main _main;
+    private ASSNetwork _assnetwork;
     private SliceLoader _loader;
 
     private int _slice = 1;
@@ -15,6 +16,11 @@ public class Slicer : MonoBehaviour {
         get
         {
             return _sliceNr;
+        }
+        set
+        {
+            _slice = _fakeSlice = _loader.GetSliceNumber(value);
+            _sliceNr = _loader.GetRealSliceNumber(_slice);
         }
     }
 
@@ -66,6 +72,7 @@ public class Slicer : MonoBehaviour {
     void Start ()
     {
         _main = GetComponent<Main>();
+        _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
         _loader = GetComponent<SliceLoader>();
 
         _sliderArea = new Rect(0, 0, sliderWidth + sliceWidth, Screen.height);
@@ -167,6 +174,8 @@ public class Slicer : MonoBehaviour {
                     _slice = _fakeSlice;
                     _sliceNr = _loader.GetRealSliceNumber(_slice);
                     _loader.ForceSliceLoad();
+
+                    _assnetwork.setSlice("my_id", _sliceNr);
                 }
                 else _offset += _offsetSpeed * Time.deltaTime;
             }
@@ -181,6 +190,8 @@ public class Slicer : MonoBehaviour {
                     _slice = _fakeSlice;
                     _sliceNr = _loader.GetRealSliceNumber(_slice);
                     _loader.ForceSliceLoad();
+
+                    _assnetwork.setSlice("my_id", _sliceNr);
                 }
                 else
                 {
@@ -222,7 +233,7 @@ public class Slicer : MonoBehaviour {
 
     void OnGUI()
     {
-        if (_main.deviceType == DeviceType.Tablet)
+        //if (_main.deviceType == DeviceType.Tablet)
         {
             // background area
 

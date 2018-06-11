@@ -52,32 +52,69 @@ namespace Meta.Buttons
         private object _stateObject = new object();
         private FileStream _writer;
         private bool _initializing;
+        
+        /// <summary>
+        /// Delegate for the OnScreenShotComplete event.
+        /// </summary>
+        public delegate void ScreenShotComplete();
 
+        /// <summary>
+        /// An event to fire when the snapshot is complete.  As the snapshot executes over time with a co-routine,
+        /// this will fire at the end of the co-routine. 
+        /// </summary>
+        public event ScreenShotComplete OnScreenShotComplete;
+
+        
+        /// <summary>
+        /// The directory for the screenshot image to be saved. 
+        /// </summary>
+        public string ScreenShotDirectory { get; set; }
+
+        /// <summary>
+        /// Returns an array of RGB24 format pixels from a texture that can be used to populate another texture.
+        /// </summary>
+        public Color[] GetLastCapturedPixels
+        {
+            get { return _texture2d.GetPixels(); }
+        }
         /// <summary>
         /// Initialize the WebCam
         /// </summary>
         private IEnumerator Start()
         {
+            SetDefaultSaveDirectory();
+
             _initializing = true;
             if (!CreateWebCamTexture())
                 yield break;
 
             _webcamTexture.Play();
+            
             yield return new WaitForSeconds(3);
             _webcamTexture.Pause();
             _initializing = false;
         }
 
         /// <summary>
-        /// Process the Meta Button Event
+        /// Upon a Meta button press, initiate a snapshot.  Can call this with null to also take a snapshot.
         /// </summary>
         /// <param name="button">Button Message</param>
         public void OnMetaButtonEvent(MetaButton button)
         {
-            if (button.Type != ButtonType.ButtonCamera)
-                return;
-            if (button.State != ButtonState.ButtonShortPress)
-                return;
+            // If we received a button event, ensure it's the correct type of button press.
+            if (button != null)
+            {
+                if (button.Type != ButtonType.ButtonCamera)
+                {
+                    return;
+                }
+
+                if (button.State != ButtonState.ButtonShortPress)
+                {
+                    return;
+                }
+            }
+
             if (!this.enabled)
             {
                 Debug.LogWarning("Script is not enabled");
@@ -133,6 +170,7 @@ namespace Meta.Buttons
                 _targetRenderer.material.mainTexture = _webcamTexture;
             }
             _texture2d = new Texture2D(targetWidth, targetHeight, TextureFormat.RGB24, false);
+            
             return true;
         }
 
@@ -155,9 +193,9 @@ namespace Meta.Buttons
             _webcamTexture.Pause();
 
             // Transfer data to the texture 2D for encoding
-            var webcamPixels = _webcamTexture.GetPixels();
+            var writePixels = _webcamTexture.GetPixels();
             yield return null;
-            _texture2d.SetPixels(webcamPixels);
+            _texture2d.SetPixels(writePixels);
             yield return null;
             _texture2d.Apply();
             yield return null;
@@ -169,6 +207,12 @@ namespace Meta.Buttons
             // Save to file
             _writer = File.Create(GetTargetFileName());
             _writer.BeginWrite(bytes, 0, bytes.Length, OnFileWriteFinished, _stateObject);
+
+            // If we have any methods subscribed to the complete, then invoke.
+            if (OnScreenShotComplete != null)
+            {
+                OnScreenShotComplete.Invoke();
+            }
         }
 
         /// <summary>
@@ -194,7 +238,10 @@ namespace Meta.Buttons
             _webcamTexture.Stop();
         }
 
-        private string GetTargetFileName()
+        /// <summary>
+        /// Sets the default directory for the images to be saved in.
+        /// </summary>
+        private void SetDefaultSaveDirectory()
         {
             // Get root folder
             var root = Environment.GetEnvironmentVariable("META_ROOT", EnvironmentVariableTarget.Process);
@@ -210,9 +257,19 @@ namespace Meta.Buttons
                 Directory.CreateDirectory(path);
             }
 
+            ScreenShotDirectory = path;
+        }
+
+        /// <summary>
+        /// Gets the full path and name of the image to be saved.
+        /// </summary>
+        /// <returns></returns>
+        private string GetTargetFileName()
+        {
+
             // Get filename
-            var fileName = string.Format("Meta Screen Shot {0:yyyy-MM-dd} at {0:HH.mm.ss} PM.png", DateTime.Now);
-            return Path.Combine(path, fileName);
+            var fileName = string.Format("Meta Screen Shot {0:yyyy-MM-dd} at {0:HH.mm.ss}.png", DateTime.Now);
+            return Path.Combine(ScreenShotDirectory, fileName);
         }
     }
 }

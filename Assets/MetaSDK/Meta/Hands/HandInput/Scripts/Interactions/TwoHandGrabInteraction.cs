@@ -41,8 +41,7 @@ namespace Meta
         
         protected override void Engage()
         {
-            //rigidbody should be kinematic as to not interfere with grab translation
-            SetIsKinematic(true);
+            PrepareRigidbodyForInteraction();
 
             //Set offset from center of object
             SetGrabOffset((FirstGrabbingHand.transform.position + SecondGrabbingHand.transform.position) / 2f);
@@ -52,7 +51,7 @@ namespace Meta
 
         protected override void Disengage()
         {
-            SetIsKinematic(false);
+            RestoreRigidbodySettingsAfterInteraction();
           
             base.Disengage();
         }

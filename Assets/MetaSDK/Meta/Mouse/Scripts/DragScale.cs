@@ -91,6 +91,24 @@ namespace Meta.Mouse
             set { _scaleTransform = value; }
         }
 
+        /// <summary>
+        /// The maximum size an object can be scaled, considering all its dimensions
+        /// </summary>
+        public float MaximumScale
+        {
+            get { return _maxScale; }
+            set { _maxScale = value; }
+        }
+
+        /// <summary>
+        /// The minimum size an object can be scaled, considering all its dimensions
+        /// </summary>
+        public float MinimumScale
+        {
+            get { return _minScale; }
+            set { _minScale = value; }
+        }
+
         private void Awake()
         {
             if (_scaleTransform == null)

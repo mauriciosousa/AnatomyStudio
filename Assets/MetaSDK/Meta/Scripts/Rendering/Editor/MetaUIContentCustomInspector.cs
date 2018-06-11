@@ -41,6 +41,8 @@ namespace Meta.Rendering
             base.OnInspectorGUI();
             CheckComponent();
 
+            EditorGUILayout.HelpBox(string.Format("Meta UI Content Count: {0}", MetaUIContent.CurrentUICount), MessageType.Info);
+
             if (_component.enabled)
             {
                 EditorGUILayout.HelpBox("Meta UI Content is: Enabled\n3D warp will be Disabled", MessageType.Warning);

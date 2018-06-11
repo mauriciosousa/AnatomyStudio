@@ -109,7 +109,7 @@ namespace Meta.SensorMessages
 
                 if (snapshot.StatusOfConnection != ConnectionStatus.CONNECTED)
                 {
-                    _controller.ChangeMinorMessage("Please plug in the headset.\n\nIf content is not visible through the visor,\nplease restart the application.");
+                    _controller.ChangeMinorMessage("Please plug in the headset.\n\nIf content is not visible through the headset,\nplease restart the application.");
                     yield return new WaitForSeconds(IntervalToCheckSensorsSeconds);
                     continue;
                 }

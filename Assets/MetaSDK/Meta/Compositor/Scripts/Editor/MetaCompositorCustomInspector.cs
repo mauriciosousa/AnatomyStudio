@@ -27,6 +27,8 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
 // LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+using Meta.Plugin;
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -54,6 +56,8 @@ namespace Meta
             DrawMember("_leftCam");
             DrawMember("_rightCam");
 
+            DrawEnableWebcam();
+
             // Clipping Planes
             DrawNearClippingPlane();
             DrawFarClippingPlane();
@@ -80,6 +84,22 @@ namespace Meta
             // Save and update
             serializedObject.ApplyModifiedProperties();
             serializedObject.Update();
+        }
+
+        private void DrawEnableWebcam()
+        {
+            var property = GetProperty("_enableWebcam");
+            bool oldValue = property.boolValue;
+            EditorGUILayout.PropertyField(property);
+            bool newValue = property.boolValue;
+
+            if (!Application.isPlaying)
+                return;
+
+            if (oldValue != newValue)
+            {
+                _component.WebcamEnabled = newValue;
+            }
         }
 
         #region Warps

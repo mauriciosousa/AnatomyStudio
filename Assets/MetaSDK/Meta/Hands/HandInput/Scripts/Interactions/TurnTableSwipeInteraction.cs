@@ -36,7 +36,7 @@ using Debug = UnityEngine.Debug;
 namespace Meta
 {
     /// <summary>
-    /// Interaction to rotate model on Y axis a specied Swipe Angle Increment after a swipe.
+    /// Interaction to rotate model on Y axis a specified Swipe Angle Increment after a swipe.
     /// </summary>
     [AddComponentMenu("Meta/Manipulation/TurnTableSwipeInteraction")]
     [RequireComponent(typeof(Rigidbody))]
@@ -49,7 +49,7 @@ namespace Meta
         /// Change in angle for each swipe
         /// </summary>
         [SerializeField]
-        private float _swipeAngleIncrement = 45;
+        private float _swipeAngleIncrement = 45f;
 
         /// <summary>
         /// Rotation speed multiplier
@@ -72,6 +72,7 @@ namespace Meta
         private const float AccelerationTime = .04f;
         private const float DeltaChangeTolerance = 1f;
         private const float MinimumDeltaTolerance = 4f;
+
         private HandFeature _handFeature;
         private float _priorDeltaAngle;
         private float _priorAngle;

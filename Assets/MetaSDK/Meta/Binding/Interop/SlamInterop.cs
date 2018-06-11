@@ -33,22 +33,36 @@ namespace Meta.Interop
 {
     public static class SlamInterop
     {
-#region SLAM Data Structures
-        [StructLayout(LayoutKind.Sequential)]
-        public struct TrackingFeedback
+        public struct TrackingStatus
         {
-            public int camera_initialized;      // used as bool
-            public int tracking_initialized;    // used as bool
-            public int percent_initialized;
-            public int filter_initialized;      // used as bool
-        }
-#endregion SLAM Data Structures
+            public enum State
+            {
+                NOT_READY = 0,
+                INITIALIZING = 1,
+                TRACKING = 2,
+                LIMITED_TRACKING  = 3
+            };
+
+            public enum Reason
+            {
+                NONE = 0,
+                NO_IMAGES = 1,
+                VISUAL_INIT = 2,
+                ESTIMATING_SCALE = 3,
+                IMU_INIT = 4,
+                LOST = 5,
+                ROTATION_ONLY = 6
+            };
+
+            public State state;
+            public Reason reason;
+        };
+
+        [DllImport(DllReferences.MetaCore, EntryPoint = "meta_get_tracking_status")]
+        public static extern TrackingStatus GetTrackingStatus();
 
         [DllImport(DllReferences.MetaCore, EntryPoint = "meta_reset_tracking")]
         public static extern void ResetSLAM();
-
-        [DllImport(DllReferences.MetaCore, EntryPoint = "meta_get_tracking_feedback")]
-        public static extern TrackingFeedback GetTrackingFeedback();
 
         [DllImport(DllReferences.MetaCore, EntryPoint = "meta_save_map")]
         public static extern bool SaveMap([MarshalAs(UnmanagedType.BStr)] string filename);

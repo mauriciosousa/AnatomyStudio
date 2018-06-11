@@ -19,6 +19,7 @@ public class SliceLoader : MonoBehaviour {
     private float _pixelSize;
 
     private float _sliceDepth = 0.05f;
+
     public float SliceDepth
     {
         get
@@ -100,16 +101,21 @@ public class SliceLoader : MonoBehaviour {
         }
 
         // refresh position
-        slice.transform.localPosition = new Vector3(slice.transform.localPosition.x, slice.transform.localPosition.y, (_currentSlice - 1) * SliceDepth);
+        updateSlicePosition();
 
         // memmory stuff
-        if(DateTime.Now > _lastUnload.AddSeconds(unloadInterval))
+        if (DateTime.Now > _lastUnload.AddSeconds(unloadInterval))
         {
             Resources.UnloadUnusedAssets();
             GC.Collect();
 
             _lastUnload = DateTime.Now;
         }
+    }
+
+    private void updateSlicePosition()
+    {
+        slice.transform.localPosition = new Vector3(slice.transform.localPosition.x, slice.transform.localScale.y / 2.0f, (_currentSlice - 1) * SliceDepth);
     }
 
     private void DownloadSlice(int sliceNumber)
@@ -140,7 +146,10 @@ public class SliceLoader : MonoBehaviour {
                         if (_refreshAspect)
                         {
                             slice.transform.localScale = new Vector3(_texture.width * _pixelSize, _texture.height * _pixelSize, 1.0f);
+                            updateSlicePosition();
                             _main.resizeOrtographicCamera();
+                            ResizeTabletopSurface();
+                            ResizeSliceIndicator();
 
                             _refreshAspect = false;
                         }
@@ -152,6 +161,33 @@ public class SliceLoader : MonoBehaviour {
                 Debug.Log("Slice donwload error: " + www.error);
             }
         }
+    }
+
+    // estas 2 funcoes deveriam estar no Main...
+    private void ResizeTabletopSurface()
+    {
+        if (_main.deviceType == DeviceType.Meta)
+        {
+            Transform surface = GameObject.Find("Surface").transform;
+            surface.localScale = new Vector3(slice.transform.localScale.x, (GetRealSliceNumber(SlicesCount) - 1) * SliceDepth, 1);
+            surface.localPosition = new Vector3(0, 0, surface.localScale.y / 2.0f);
+
+            Transform tabletop = surface.parent;
+            tabletop.position = new Vector3(tabletop.position.x - surface.localScale.y / 2.0f, tabletop.position.y, tabletop.position.z);
+
+            Transform translationHandle = GameObject.Find("TranslationHandle").transform;
+            MoveOtherObject[] components = translationHandle.gameObject.GetComponents<MoveOtherObject>();
+            foreach (MoveOtherObject c in components)
+                c.SetPosition(new Vector3(surface.position.x - surface.localScale.y / 2.0f, surface.position.y + 0.5f, surface.position.z - surface.localScale.x / 2.0f));
+
+            Transform rotationHandle = GameObject.Find("RotationHandle").transform;
+            rotationHandle.GetComponent<RotateOtherAround>().SetPosition(new Vector3(translationHandle.position.x, translationHandle.position.y, translationHandle.position.z + surface.localScale.x));
+        }
+    }
+    private void ResizeSliceIndicator()
+    {
+        SliceIndicator.frameWidth = slice.transform.localScale.x;
+        SliceIndicator.frameHeight = slice.transform.localScale.y;
     }
 
     public Texture2D GetThumbnail(int slice)
@@ -176,5 +212,44 @@ public class SliceLoader : MonoBehaviour {
     public int GetRealSliceNumber(int slice)
     {
         return _realSliceNumbers[slice];
+    }
+
+    public int GetSliceNumber(int realNumber)
+    {
+        realNumber = GetNearestSlice(realNumber);
+
+        foreach (KeyValuePair<int, int> p in _realSliceNumbers)
+        {
+            if (p.Value == realNumber)
+                return p.Key;
+        }
+
+        return -1;
+    }
+
+    public int GetNearestSlice(int slice)
+    {
+        int lastSlice = -1;
+
+        foreach(int s in _realSliceNumbers.Values)
+        {
+            if (slice == s)
+                return s;
+
+            if(slice < s)
+            {
+                if (lastSlice < 0)
+                    return s;
+
+                if (Math.Abs(lastSlice - slice) < Math.Abs(s - slice))
+                    return lastSlice;
+                else
+                    return s;
+            }
+
+            lastSlice = s;
+        }
+
+        return lastSlice;
     }
 }

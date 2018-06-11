@@ -65,5 +65,14 @@ namespace Meta.Plugin
 
             MarshalAndCopy(projectionMatrixPtr, ref projectionMatrix);
         }
+
+        public static void GetWebcamViewMatrix(ref Matrix4x4 viewMatrix)
+        {
+            IntPtr viewMatrixPtr = IntPtr.Zero;
+
+            CompositorInterop.getWebcamViewMatrix(ref viewMatrixPtr);
+
+            MarshalAndCopy(viewMatrixPtr, ref viewMatrix);
+        }
     }
 }
