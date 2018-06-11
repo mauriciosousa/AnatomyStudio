@@ -1,8 +1,9 @@
 device.type=Tablet
-peer.type=server
+peer.type=client
 server.address=146.193.224.129
 server.port=5000
-slices.path=D:\DMendes\Dev\Coupes KVW_jpg\thumbs
+slices.path=E:\thumbs
 slices.http=146.193.224.163:8080
 slices.thickness=0.0002
 slices.pixelsize=0.0001
+storage.file=E:\Data\data.txt

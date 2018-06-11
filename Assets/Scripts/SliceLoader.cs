@@ -33,6 +33,14 @@ public class SliceLoader : MonoBehaviour {
     private int _currentSlice;
     private string _slicesPath;
     private string _slicesHttp;
+    public string SlicesHTTP
+    {
+        get
+        {
+            return _slicesHttp;
+        }
+    }
+
     private FileInfo[] _filesInfo;
     private bool _refreshAspect;
 
@@ -141,6 +149,8 @@ public class SliceLoader : MonoBehaviour {
                         {
                             slice.transform.localScale = new Vector3(_texture.width * _pixelSize, _texture.height * _pixelSize, 1.0f);
                             _main.resizeOrtographicCamera();
+
+                            GetComponent<Storage>().Load();
 
                             _refreshAspect = false;
                         }
