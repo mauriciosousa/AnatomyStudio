@@ -6,18 +6,21 @@ using System.Text;
 
 public class Storage : MonoBehaviour {
 
-    private string _dataPath = "data.txt";
+    private string _dataPath = "." + System.IO.Path.DirectorySeparatorChar;
     private string _dataFile = "data.txt";
-
+    private string _fileName;
 
     public ASSNetwork network;
 
     public char separator = '#';
 
-    void Start () {
+    void Start ()
+    {
+        _dataPath = gameObject.GetComponent<ConfigProperties>().storageDataPath;
+        _dataFile = gameObject.GetComponent<ConfigProperties>().storageDataFile;
 
-        _dataPath = gameObject.GetComponent<ConfigProperties>().storageDataFile;
-	}
+        _fileName = _dataPath + System.IO.Path.DirectorySeparatorChar + _dataFile;
+    }
 
     void Update()
     {
@@ -32,14 +35,14 @@ public class Storage : MonoBehaviour {
         string[] lines = null;
         if (network.peerType == ASSNetwork.ASSPeerType.server)
         {
-            if (File.Exists(_dataPath))
+            if (File.Exists(_fileName))
             {
-                lines = File.ReadAllLines(_dataPath);
+                lines = File.ReadAllLines(_fileName);
                 _loadLines(lines);
             }
             else
             {
-                throw new System.Exception("Cannot find file: " + _dataPath);
+                print("Cannot find file: " + _fileName);
             }
         }
         else
@@ -74,7 +77,7 @@ public class Storage : MonoBehaviour {
             string dataLine = "";
             dataLine += structureName + separatorStr;
             dataLine += lineID + separatorStr;
-            print("SLICE " + slice);
+
             dataLine += slice;
             foreach (Vector3 p in positions)
             {
@@ -85,13 +88,12 @@ public class Storage : MonoBehaviour {
 
         if (lines.Length > 0)
         {
-
-            FileInfo fileInfo = new FileInfo(_dataPath);
+            FileInfo fileInfo = new FileInfo(_fileName);
             if (!fileInfo.Exists)
                 Directory.CreateDirectory(fileInfo.Directory.FullName);
 
-            Debug.Log("Writing to " + _dataPath);
-            File.WriteAllLines(_dataPath, dataLines.ToArray(), Encoding.UTF8);
+            Debug.Log("Writing to " + _fileName);
+            File.WriteAllLines(_fileName, dataLines.ToArray(), Encoding.UTF8);
         }
     }
 
@@ -117,7 +119,6 @@ public class Storage : MonoBehaviour {
                     positions.Add(position);
                 }
 
-                print("STRUCTURE " + structureName);
                 gameObject.GetComponent<Draw>().AddLine(lineID, slice, structureName, positions.ToArray());
             }
         }

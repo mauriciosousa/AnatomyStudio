@@ -81,6 +81,6 @@ public class SliceHandlePlaceholder : MonoBehaviour {
 
         _slicer.Slice = _indicator.Slice;
 
-        _assnetwork.setSlice("my_id", _indicator.Slice);
+        _assnetwork.setSlice(_indicator.Slice);
     }
 }

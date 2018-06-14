@@ -33,15 +33,25 @@ public class SliceIndicator : MonoBehaviour {
 
     private SliceLoader _loader;
 
-    // Use this for initialization
+    private bool _inited = false;
+
+    private void init()
+    {
+        if (!_inited)
+        {
+            _loader = GameObject.Find("Main").GetComponent<SliceLoader>();
+
+            AdjustComponentsPosition();
+
+            _inited = true;
+        }
+    }
+
     void Start ()
     {
-        _loader = GameObject.Find("Main").GetComponent<SliceLoader>();
-
-        AdjustComponentsPosition();
+        init();
     }
 	
-	// Update is called once per frame
 	void Update ()
     {
         AdjustComponentsPosition();
@@ -65,6 +75,8 @@ public class SliceIndicator : MonoBehaviour {
 
     private void AdjustPosition()
     {
+        init();
+
         transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y, (_slice - 1) * _loader.SliceDepth);
     }
 

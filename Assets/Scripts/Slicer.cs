@@ -8,6 +8,7 @@ public class Slicer : MonoBehaviour
     private Main _main;
     private ASSNetwork _assnetwork;
     private SliceLoader _loader;
+    private OtherSlices _otherSlices;
 
     private int _slice = 1;
     private int _sliceNr = 1;
@@ -67,6 +68,7 @@ public class Slicer : MonoBehaviour
     private static float thumbHeight = 200;
 
     private GUIStyle _nameStyle;
+    private GUIStyle _nameShadowStyle;
 
     // Use this for initialization
     void Start ()
@@ -74,6 +76,7 @@ public class Slicer : MonoBehaviour
         _main = GetComponent<Main>();
         _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
         _loader = GetComponent<SliceLoader>();
+        _otherSlices = GetComponent<OtherSlices>();
 
         _sliderArea = new Rect(0, 0, sliderWidth + sliceWidth, Screen.height);
 
@@ -106,12 +109,14 @@ public class Slicer : MonoBehaviour
         _scrolling = false;
         _fakeSlice = _slice;
 
-        // thumbnails
+        // name
 
         _nameStyle = new GUIStyle();
-        _nameStyle.alignment = TextAnchor.MiddleCenter;
+        _nameStyle.alignment = TextAnchor.MiddleLeft;
         _nameStyle.normal.textColor = Color.white;
-        _nameStyle.normal.background = Utils.CreateColorTexture(Color.black);
+
+        _nameShadowStyle = new GUIStyle(_nameStyle);
+        _nameShadowStyle.normal.textColor = Color.black;
     }
 
     // Update is called once per frame
@@ -124,7 +129,7 @@ public class Slicer : MonoBehaviour
 
             if (_sliderArea.Contains(Input.mousePosition))
             {
-                if (Input.mousePosition.x < sliderWidth)
+                if (Input.mousePosition.x < left + sliderWidth)
                 {
                     _sliding = true;
                     _slideSpeed = 0;
@@ -175,7 +180,7 @@ public class Slicer : MonoBehaviour
                     _sliceNr = _loader.GetRealSliceNumber(_slice);
                     _loader.ForceSliceLoad();
 
-                    _assnetwork.setSlice("my_id", _sliceNr);
+                    _assnetwork.setSlice(_sliceNr);
                 }
                 else _offset += _offsetSpeed * Time.deltaTime;
             }
@@ -191,7 +196,7 @@ public class Slicer : MonoBehaviour
                     _sliceNr = _loader.GetRealSliceNumber(_slice);
                     _loader.ForceSliceLoad();
 
-                    _assnetwork.setSlice("my_id", _sliceNr);
+                    _assnetwork.setSlice(_sliceNr);
                 }
                 else
                 {
@@ -249,8 +254,18 @@ public class Slicer : MonoBehaviour
             float barHeight = Screen.height;
             float barPosition = (barHeight - cursorHeight) * (1 - (_fakeSlice - 1) / (float)(_loader.SlicesCount - 1)) - Screen.height / 2.0f + cursorHeight / 2.0f;
 
-            GUI.Box(new Rect(left + 1, barPosition, sliderWidth - 2, barHeight), "", _backgroundStyle);
-            GUI.Box(new Rect(left + 1, Screen.height / 2.0f - cursorHeight / 2.0f, sliderWidth - 2, cursorHeight), "", _cursorStyle);
+            GUI.Label(new Rect(left + 1, barPosition, sliderWidth - 2, barHeight), "", _backgroundStyle);
+            GUI.Label(new Rect(left + 1, Screen.height / 2.0f - cursorHeight / 2.0f, sliderWidth - 2, cursorHeight), "", _cursorStyle);
+
+            // draw thumbnail
+
+            if (_sliding || _scrolling)
+            {
+                Texture2D thumbTex = _loader.GetThumbnail(_loader.GetRealSliceNumber(_fakeSlice));
+                float thumbWidth = thumbHeight * thumbTex.width / thumbTex.height;
+                GUI.Label(new Rect(left + _sliderArea.width, Screen.height / 2.0f - thumbHeight / 2.0f - 2, thumbWidth + 4, thumbHeight + 4), "", _sliderAreaStyle);
+                GUI.DrawTexture(new Rect(left + _sliderArea.width + 2, Screen.height / 2.0f - thumbHeight / 2.0f, thumbWidth, thumbHeight), thumbTex, ScaleMode.ScaleAndCrop);
+            }
 
             // detail slider
 
@@ -258,42 +273,44 @@ public class Slicer : MonoBehaviour
             float halfSliceCount = Mathf.Ceil(otherSlicesCount / 2.0f);
 
             // draw current slice
-            GUI.Box(new Rect(left + sliderWidth + 1, currentSlicePosY + 1, sliceWidth - 2, currentSliceHeight - 2), "" + _loader.GetRealSliceNumber(_fakeSlice), _currentSliceStyle);
+            int realSlice = _loader.GetRealSliceNumber(_fakeSlice);
+            GUI.Label(new Rect(left + sliderWidth + 1, currentSlicePosY + 1, sliceWidth - 2, currentSliceHeight - 2), "" + realSlice, _currentSliceStyle);
+            GUIUserName(new Rect(left + sliderWidth + sliceWidth + 5, currentSlicePosY + 1, 100, currentSliceHeight - 2), _otherSlices.GetUserInSlice(realSlice));
             // draw slices up
             for (int i = 1; i <= halfSliceCount; i++)
             {
                 if (_fakeSlice - i < 1) break;
-                if (GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY - sliceHeight * i + 1, sliceWidth - 2, sliceHeight - 2), "" + _loader.GetRealSliceNumber(_fakeSlice - i), _sliceStyle))
+                realSlice = _loader.GetRealSliceNumber(_fakeSlice - i);
+                if (GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY - sliceHeight * i + 1, sliceWidth - 2, sliceHeight - 2), "" + realSlice, _sliceStyle))
                 {
                     if (_slicesChanged == 0)
                     {
                         _fakeSlice = _fakeSlice - i;
                     }
                 }
+                GUIUserName(new Rect(left + sliderWidth + sliceWidth + 5, currentSlicePosY - sliceHeight * i + 1, 100, sliceHeight - 2), _otherSlices.GetUserInSlice(realSlice));
             }
             // draw slices down
             for (int i = 1; i <= halfSliceCount; i++)
             {
                 if (_fakeSlice + i > _loader.SlicesCount) break;
-                if(GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY + currentSliceHeight + sliceHeight * (i - 1) + 1, sliceWidth - 2, sliceHeight - 2), "" + _loader.GetRealSliceNumber(_fakeSlice + i), _sliceStyle))
+                realSlice = _loader.GetRealSliceNumber(_fakeSlice + i);
+                if (GUI.Button(new Rect(left + sliderWidth + 1, currentSlicePosY + currentSliceHeight + sliceHeight * (i - 1) + 1, sliceWidth - 2, sliceHeight - 2), "" + realSlice, _sliceStyle))
                 {
                     if (_slicesChanged == 0)
                     {
                         _fakeSlice = _fakeSlice + i;
                     }
                 }
-            }
-
-            // draw thumbnail
-
-            if(_sliding || _scrolling)
-            {
-                Texture2D thumbTex = _loader.GetThumbnail(_loader.GetRealSliceNumber(_fakeSlice));
-                float thumbWidth = thumbHeight * thumbTex.width / thumbTex.height;
-                GUI.Box(new Rect(left + _sliderArea.width, Screen.height / 2.0f - thumbHeight / 2.0f - 2, thumbWidth + 4, thumbHeight + 4), "", _sliderAreaStyle);
-                GUI.DrawTexture(new Rect(left + _sliderArea.width + 2, Screen.height / 2.0f - thumbHeight / 2.0f, thumbWidth, thumbHeight), thumbTex, ScaleMode.ScaleAndCrop);
+                GUIUserName(new Rect(left + sliderWidth + sliceWidth + 5, currentSlicePosY + currentSliceHeight + sliceHeight * (i - 1) + 1, 100, sliceHeight - 2), _otherSlices.GetUserInSlice(realSlice));
             }
         }
+    }
+
+    private void GUIUserName(Rect rect, string name)
+    {
+        GUI.Label(new Rect(rect.x + 1, rect.y + 1, rect.width, rect.height), name, _nameShadowStyle);
+        GUI.Label(rect, name, _nameStyle);
     }
 
     public bool IsSlicing()

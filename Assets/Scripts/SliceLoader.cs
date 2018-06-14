@@ -131,8 +131,11 @@ public class SliceLoader : MonoBehaviour {
         // set thumb as slice for immediate feedback
         LoadThumbnail(sliceNumber, _texture);
 
-        // download slice
-        StartCoroutine(HTTPGetSlice(sliceNumber));
+        if (_main.deviceType != DeviceType.Meta || _refreshAspect)
+        {
+            // download slice
+            StartCoroutine(HTTPGetSlice(sliceNumber));
+        }
     }
 
     private IEnumerator HTTPGetSlice(int sliceNumber)

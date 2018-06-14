@@ -88,6 +88,22 @@ public class ConfigProperties : MonoBehaviour {
         }
     }
 
+    public string storageDataPath
+    {
+        get
+        {
+            return _load("storage.path");
+        }
+    }
+
+    public string userID
+    {
+        get
+        {
+            return _load("user.ID");
+        }
+    }
+
     private string _load(string property)
     {
         if (File.Exists(configFilenameFullPath))

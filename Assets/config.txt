@@ -1,8 +1,11 @@
-device.type=Meta
-peer.type=client
+device.type=Tablet
+peer.type=server
+user.ID=Lenon
 server.address=127.0.0.1
 server.port=5000
 slices.path=D:\DMendes\Dev\Coupes KVW_jpg\thumbs
 slices.http=146.193.224.163:8080
 slices.thickness=0.0002
 slices.pixelsize=0.0001
+storage.file=data.txt
+storage.path=D:\DMendes\Dev\Coupes KVW_jpg\thumbs\Data

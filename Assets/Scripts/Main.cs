@@ -12,6 +12,8 @@ public enum DeviceType
 
 public class Main : MonoBehaviour {
 
+    public int fps = 24;
+
     public DeviceType deviceType;
 
     private Slicer _slicer;
@@ -32,6 +34,8 @@ public class Main : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
+        Application.targetFrameRate = fps;
+
         _slicer = GetComponent<Slicer>();
         _loader = GetComponent<SliceLoader>();
         _config = GetComponent<ConfigProperties>();
