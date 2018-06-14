@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class Draw : MonoBehaviour {
 
@@ -155,6 +156,11 @@ public class Draw : MonoBehaviour {
 
     private void EndDrawing()
     {
+        string fullLinesName = _currentVolume + "Lines";
+        GameObject parent = GameObject.Find(fullLinesName);
+        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>(); ;
+        lines.updateLines(_slicer.Slice);
+
         UpdateVolume(_currentVolume);
 
         _drawing = false;
@@ -211,10 +217,12 @@ public class Draw : MonoBehaviour {
         if (parent == null)
         {
             parent = new GameObject(fullLinesName);
+            parent.AddComponent<VolumeLineInfo>();
             parent.transform.parent = tabletop;
             parent.transform.localPosition = Vector3.zero;
             parent.transform.localRotation = Quaternion.identity;
         }
+        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>(); ;
 
         GameObject go = Instantiate(Resources.Load("Prefabs/Line", typeof(GameObject))) as GameObject;
         go.name = lineID;
@@ -224,6 +232,7 @@ public class Draw : MonoBehaviour {
         go.transform.localRotation = Quaternion.identity;
 
         LineRenderer lr = go.GetComponent<LineRenderer>();
+        lines.addLine(_slicer.Slice, lr);
         lr.material = Resources.Load("Materials/" + _sList.GetMaterialName(volumeName) + "Line", typeof(Material)) as Material;
 
         return lr;
@@ -234,83 +243,494 @@ public class Draw : MonoBehaviour {
         if (_main.deviceType == DeviceType.Tablet && disableTabletVolumes) return;
         if (volumeName == "none") return;
 
-        string fullVolumeName = volumeName + "Mesh";
+        CreateMesh(volumeName);
+    }
+
+
+    //Pra fazer tudo virar uma mesh só:
+    //- se a mesh atual - numero de triangulos que eu tinha nela, + numero de pontos que eu tenho * 2 menor que 64k, refaço a mesh. Caso contrário tenho que refazer essa e a próxima. 
+    private void connectLinesNotAll(Circle alines, Circle blines, int slicea, string volumeName)
+    {
+
+        GameObject parentVolume = GameObject.Find(volumeName);
+        if (parentVolume == null)
+        {
+            parentVolume = new GameObject(volumeName);
+            parentVolume.transform.parent = tabletop;
+            parentVolume.transform.localPosition = Vector3.zero;
+            parentVolume.transform.localRotation = Quaternion.identity;
+        }
+
+        string fullVolumeName = volumeName + slicea + "Mesh";
 
         GameObject volume = GameObject.Find(fullVolumeName);
-        if(volume == null)
+        if (volume == null)
         {
             volume = Instantiate(Resources.Load("Prefabs/Volume", typeof(GameObject))) as GameObject;
             volume.name = fullVolumeName;
             volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/" + _sList.GetMaterialName(volumeName) + "Volume", typeof(Material)) as Material;
-            volume.transform.parent = tabletop;
+            volume.transform.parent = parentVolume.transform;
             volume.transform.localPosition = Vector3.zero;
             volume.transform.localRotation = Quaternion.identity;
         }
-        volume.GetComponent<MeshFilter>().mesh = CreateMesh(volumeName);
-    }
+        
+        //Start matching points
+        if (alines.pointCount == 0 || blines.pointCount == 0)
+        {
+            volume.GetComponent<MeshFilter>().mesh = null;
+            return;
+        }
 
-    private Mesh CreateMesh(string volume)
-    {
         Mesh m = new Mesh();
         m.name = "ScriptedMesh";
-        List<int> triangles = new List<int>();
+        List<int> finalTriangles = new List<int>();
+        List<Vector3> finalPoints = new List<Vector3>();
 
-        GameObject go = GameObject.Find(volume + "Lines");
-
-        int numPoints = 0;
-        foreach (Transform child in go.transform)
+   
+        Circle smaller, bigger;
+        if (alines.pointCount > blines.pointCount)
         {
-            if(child.gameObject.activeInHierarchy)
-                numPoints += child.GetComponent<LineRenderer>().positionCount;
+            smaller = blines;
+            bigger = alines;
+        }
+        else
+        {
+            smaller = alines;
+            bigger = blines;
         }
 
-        if (numPoints < 3) return null;
+        int trianglesPerPoint = (int)Math.Floor((bigger.pointCount - 1) / ((float)smaller.pointCount));
+        int remainderPool = (bigger.pointCount - 1) % smaller.pointCount;
 
-        double[][] vertices = new double[numPoints][];
+        LineInfo smallerLine = smaller.lines[smaller.lineStartID];
+        int smallerI = smaller.pointStartID;
+        int smallerInc = smaller.directionClockwise;
+        LineInfo biggerLine = bigger.lines[bigger.lineStartID];
+        int biggerI = bigger.pointStartID;
+        int biggerInc = bigger.directionClockwise;
 
         int i = 0;
-        foreach (Transform child in go.transform)
+        int vertexID = 0;
+        int edgeID = -1;
+
+        bool invert = false;
+        //find triangle direction 
+        if(smallerLine.line.GetPosition(smallerI).z > biggerLine.line.GetPosition(biggerI).z)
         {
-            if (child.gameObject.activeInHierarchy)
+            invert = true;
+        }
+
+        while (i < smaller.pointCount)
+        {
+            int j = 0;
+            finalPoints.Add(smallerLine.line.GetPosition(smallerI));
+            vertexID++;
+
+
+            //not my first edge
+            if (edgeID != -1)
             {
-                LineRenderer lr = child.GetComponent<LineRenderer>();
-                for (int j = 0; j < lr.positionCount; j++)
+                if (invert) { 
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 2);
+                    finalTriangles.Add(vertexID - 1);
+                }else
                 {
-                    Vector3 v = lr.GetPosition(j);
-                    vertices[i++] = new double[3] { v.x, v.y, v.z };
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID - 2);
+                }
+                edgeID = vertexID - 1;
+            }
+            else
+            {
+                finalPoints.Add(biggerLine.line.GetPosition(biggerI));
+                vertexID++;
+                bigger.nextPoint(ref biggerI, ref biggerLine, ref biggerInc);
+                j++;
+                edgeID = 0;
+            }
+            
+            while (j < trianglesPerPoint)
+            {
+                bigger.nextPoint(ref biggerI, ref biggerLine, ref biggerInc);
+                j++;
+            }
+            if (remainderPool > 0)
+            {
+                remainderPool--;
+                bigger.nextPoint(ref biggerI, ref biggerLine, ref biggerInc);
+            }
+
+            finalPoints.Add(biggerLine.line.GetPosition(biggerI));
+            vertexID++;
+            if (edgeID == 0)
+            {
+                if (invert) { 
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 2);
+                    finalTriangles.Add(vertexID - 1);
+                }else
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID - 2);
                 }
             }
-        }
-
-        try
-        {
-            var result = MIConvexHull.ConvexHull.Create(vertices);
-
-            List<Vector3> vertices2 = new List<Vector3>();
-
-            i = 0;
-            foreach (MIConvexHull.DefaultVertex v in result.Points)
+            else
             {
-                vertices2.Add(VertexToVector(v));
+                if (invert) {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(edgeID - 1);
+                    finalTriangles.Add(vertexID - 1);
+                }else {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(edgeID - 1);
+                }
             }
-            m.vertices = vertices2.ToArray();
+            
 
-            foreach (var face in result.Faces)
-            {
-                triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[0])));
-                triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[1])));
-                triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[2])));
-            }
-
-            m.triangles = triangles.ToArray();
-            m.RecalculateNormals();
+            smaller.nextPoint(ref smallerI, ref smallerLine, ref smallerInc);
+            i++;
         }
-        catch(Exception e)
+
+        if (invert) { 
+            finalTriangles.Add(edgeID);
+            finalTriangles.Add(vertexID - 1);
+            finalTriangles.Add(0);
+        }else
         {
-            print(e);
+            finalTriangles.Add(edgeID);
+            finalTriangles.Add(0);
+            finalTriangles.Add(vertexID - 1);
         }
 
-        return m;
+        if (invert) { 
+            finalTriangles.Add(0);
+            finalTriangles.Add(vertexID - 1);
+            finalTriangles.Add(1);
+        }else
+        {
+            finalTriangles.Add(0);
+            finalTriangles.Add(1);
+            finalTriangles.Add(vertexID - 1);
+        }
+
+        m.vertices = finalPoints.ToArray();
+        m.triangles = finalTriangles.ToArray();
+        m.RecalculateNormals();
+        volume.GetComponent<MeshFilter>().mesh = m;
+    }
+
+    private void connectLines(Circle alines, Circle blines, int slicea, string volumeName)
+    {
+
+        GameObject parentVolume = GameObject.Find(volumeName);
+        if (parentVolume == null)
+        {
+            parentVolume = new GameObject(volumeName);
+            parentVolume.transform.parent = tabletop;
+            parentVolume.transform.localPosition = Vector3.zero;
+            parentVolume.transform.localRotation = Quaternion.identity;
+        }
+
+        string fullVolumeName = volumeName + slicea + "Mesh";
+
+        GameObject volume = GameObject.Find(fullVolumeName);
+        if (volume == null)
+        {
+            volume = Instantiate(Resources.Load("Prefabs/Volume", typeof(GameObject))) as GameObject;
+            volume.name = fullVolumeName;
+            volume.GetComponent<MeshRenderer>().material = Resources.Load("Materials/" + _sList.GetMaterialName(volumeName) + "Volume", typeof(Material)) as Material;
+            volume.transform.parent = parentVolume.transform;
+            volume.transform.localPosition = Vector3.zero;
+            volume.transform.localRotation = Quaternion.identity;
+        }
+
+        Mesh m = new Mesh();
+        m.name = "ScriptedMesh";
+        List<int> finalTriangles = new List<int>();
+        List<Vector3> finalPoints = new List<Vector3>();
+
+        //Start matching points
+
+        Circle smaller, bigger;
+        if (alines.pointCount > blines.pointCount)
+        {
+            smaller = blines;
+            bigger = alines;
+        }
+        else
+        {
+            smaller = alines;
+            bigger = blines;
+        }
+
+        int trianglesPerPoint = (int)Math.Floor((bigger.pointCount - 1) / ((float)smaller.pointCount));
+        int remainderPool = (bigger.pointCount - 1) % smaller.pointCount;
+
+        LineInfo smallerLine = smaller.lines[smaller.lineStartID];
+        int smallerI = smaller.pointStartID;
+        int smallerInc = smaller.directionClockwise;
+        LineInfo biggerLine = bigger.lines[bigger.lineStartID];
+        int biggerI = bigger.pointStartID;
+        int biggerInc = bigger.directionClockwise;
+
+        int i = 0;
+        int vertexID = 0;
+        int edgeID = -1;
+
+        bool invert = false;
+        //find triangle direction 
+        if (smallerLine.line.GetPosition(smallerI).z > biggerLine.line.GetPosition(biggerI).z)
+        {
+            invert = true;
+        }
+
+        while (i < smaller.pointCount)
+        {
+            int j = 0;
+            finalPoints.Add(smallerLine.line.GetPosition(smallerI));
+            vertexID++;
+
+
+
+            //not my first edge
+            if (edgeID != -1)
+            {
+                if (invert)
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 2);
+                    finalTriangles.Add(vertexID - 1);
+
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID - 2);
+                    finalTriangles.Add(vertexID);
+                }else
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID - 2);
+
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID);
+                    finalTriangles.Add(vertexID - 2);
+                }
+                j++;
+                edgeID = vertexID - 1;
+            }
+            else
+            {
+                edgeID = 0;
+            }
+
+            finalPoints.Add(biggerLine.line.GetPosition(biggerI));
+            bigger.nextPoint(ref biggerI, ref biggerLine, ref biggerInc);
+            vertexID++;
+
+            while (j < trianglesPerPoint)
+            {
+                finalPoints.Add(biggerLine.line.GetPosition(biggerI));
+                if (invert)
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID++);
+                }else
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID);
+                    finalTriangles.Add(vertexID++ - 1);
+                }
+                j++;
+                bigger.nextPoint(ref biggerI, ref biggerLine, ref biggerInc);
+            }
+            if (remainderPool > 0)
+            {
+                remainderPool--;
+                finalPoints.Add(biggerLine.line.GetPosition(biggerI));
+                if (invert)
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID - 1);
+                    finalTriangles.Add(vertexID++);
+                }else
+                {
+                    finalTriangles.Add(edgeID);
+                    finalTriangles.Add(vertexID);
+                    finalTriangles.Add(vertexID++ - 1);
+                }
+                bigger.nextPoint(ref biggerI, ref biggerLine, ref biggerInc);
+            }
+            smaller.nextPoint(ref smallerI, ref smallerLine, ref smallerInc);
+            i++;
+        }
+
+        if (invert)
+        {
+            finalTriangles.Add(edgeID);
+            finalTriangles.Add(0);
+            finalTriangles.Add(vertexID - 1);
+            finalTriangles.Add(0);
+            finalTriangles.Add(vertexID - 1);
+            finalTriangles.Add(1);
+        }
+        else {
+            finalTriangles.Add(edgeID);
+            finalTriangles.Add(vertexID - 1);
+            finalTriangles.Add(0);
+            finalTriangles.Add(0);
+            finalTriangles.Add(1);
+            finalTriangles.Add(vertexID - 1);
+        }
+        m.vertices = finalPoints.ToArray();
+        m.triangles = finalTriangles.ToArray();
+        m.RecalculateNormals();
+        volume.GetComponent<MeshFilter>().mesh = m;
+    }
+
+    private void CreateMesh(string volume)
+    {
+  
+        GameObject go = GameObject.Find(volume + "Lines");
+
+        Dictionary<int,Circle> las = go.GetComponent<VolumeLineInfo>().LinesAtSlice;
+
+        List<int> keys =  las.Keys.ToList();
+        keys.Sort();
+
+        int i = 0;
+        for (; i < keys.Count; i++)
+        {
+            if (keys[i] == _slicer.Slice)
+                break;
+        }
+
+      
+     
+            //if not first slice, connect current slice with the previous one
+        if(i != 0)
+        {
+            connectLinesNotAll(las[keys[i]], las[keys[i - 1]],keys[i],volume);
+
+        }
+
+        //if not last slice, connect next slice with me 
+        if(i != keys.Count - 1)
+        {
+            connectLinesNotAll(las[keys[i]], las[keys[i + 1]],keys[i+1], volume);
+        }
+
+        if (las[keys[i]].pointCount == 0 && i != keys.Count - 1 && i!=0)
+        {
+            connectLinesNotAll(las[keys[i-1]], las[keys[i + 1]], keys[i + 1], volume);
+        }
+
+
+
+        //GameObject go = GameObject.Find(volume + "Lines");
+
+        //int numPoints = 0;
+        //foreach (Transform child in go.transform)
+        //{
+        //    if(child.gameObject.activeInHierarchy)
+        //        numPoints += child.GetComponent<LineRenderer>().positionCount;
+        //}
+
+        //if (numPoints < 3) return null;
+
+        //float[] vertices = new float[numPoints * 3];
+
+        //int i = 0;
+
+        /////// ISSO DEVE SER APAGADO
+        //double[][] verticesold = new double[numPoints][];
+
+        //i = 0;
+        //foreach (Transform child in go.transform)
+        //{
+        //    if (child.gameObject.activeInHierarchy)
+        //    {
+        //        LineRenderer lr = child.GetComponent<LineRenderer>();
+        //        for (int j = 0; j < lr.positionCount; j++)
+        //        {
+        //            Vector3 v = lr.GetPosition(j);
+        //            verticesold[i++] =new double[3]{ v.x, v.y, v.z };
+        //        }
+        //    }
+        //}
+        //try
+        //{
+        //    var result = MIConvexHull.ConvexHull.Create(verticesold);
+
+        //    List<Vector3> vertices2 = new List<Vector3>();
+
+        //    i = 0;
+        //    foreach (MIConvexHull.DefaultVertex v in result.Points)
+        //    {
+        //        vertices2.Add(VertexToVector(v));
+        //    }
+        //    m.vertices = vertices2.ToArray();
+
+        //    foreach (var face in result.Faces)
+        //    {
+        //        triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[0])));
+        //        triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[1])));
+        //        triangles.Add(vertices2.IndexOf(VertexToVector(face.Vertices[2])));
+        //    }
+
+        //    m.triangles = triangles.ToArray();
+        //    m.RecalculateNormals();
+        //}
+        //catch (Exception e)
+        //{
+        //    print(e);
+        //}
+
+        //PLUGIN STUFF
+        //try
+        //{
+        //    int outVertLength = 0;
+        //    int outTriLength = 0;
+
+        //    IntPtr verts = Marshal.AllocCoTaskMem(sizeof(float) * vertices.Length);
+        //    Marshal.Copy(vertices, 0, verts, vertices.Length);
+
+        //    IntPtr outTri = Marshal.AllocCoTaskMem(sizeof(int) * vertices.Length * 3); // we estimate 3 times the n of vertices (its actually probably 2)
+
+        //    ReconstructCloudGP3( verts, outTri, vertices.Length, out outVertLength, out outTriLength);
+
+
+        //    List<Vector3> vertices2 = new List<Vector3>();
+        //    Marshal.Copy(verts, vertices, 0, outVertLength);
+        //    for (i = 0; i < outVertLength;)
+        //    {
+        //        print(vertices[i] + " " +vertices[i + 1] + " " + vertices[i + 2]);
+        //        vertices2.Add(new Vector3(vertices[i++], vertices[i++], vertices[i++]));
+        //    }
+        //    m.vertices = vertices2.ToArray();
+
+
+        //    int[] cpptriangles = new int[outTriLength];
+        //    Marshal.Copy(outTri, cpptriangles, 0, outTriLength);
+
+        //    for (i = 0; i < outTriLength;i++)
+        //    {
+        //        triangles.Add(cpptriangles[i]);
+        //    }
+
+        //    m.triangles = triangles.ToArray();
+        //    m.RecalculateNormals();
+
+        //}
+        //catch (Exception e)
+        //{
+        //    print("Deu merda no plugin");
+        //    print(e);
+        //}
+
     }
 
     private Vector3 VertexToVector(MIConvexHull.DefaultVertex v)
@@ -325,9 +745,17 @@ public class Draw : MonoBehaviour {
 
     public void RemoveLine(GameObject gameObject)
     {
+        string fullLinesName = _currentVolume + "Lines";
+        GameObject parent = GameObject.Find(fullLinesName);
+        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>(); ;
+        lines.removeLine(gameObject.GetComponent<LineRenderer>(), _slicer.Slice);
+        lines.updateLines(_slicer.Slice);
+
         string volume = gameObject.transform.parent.gameObject.name.Replace("Lines", "");
         gameObject.SetActive(false);
         Destroy(gameObject);
+
+   
         UpdateVolume(volume);
     }
 }
