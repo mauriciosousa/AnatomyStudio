@@ -14,6 +14,8 @@ public class SliceIndicator : MonoBehaviour {
 
     public GameObject slicePreview;
 
+    public GameObject sliceNr;
+
     public float frameThickness;
     public float frameDepth;
 
@@ -71,6 +73,8 @@ public class SliceIndicator : MonoBehaviour {
 
         slicePreview.transform.localScale = new Vector3(1, frameHeight, frameWidth);
         slicePreview.transform.localPosition = new Vector3(0, frameHeight / 2.0f, 0);
+
+        sliceNr.transform.localPosition = new Vector3(frameDepth + 0.01f, frameHeight / 2.0f, -frameWidth / 2.0f);
     }
 
     private void AdjustPosition()

@@ -8,12 +8,15 @@ public class SliceHandlePlaceholder : MonoBehaviour {
     private Slicer _slicer;
     private SliceLoader _loader;
     private SliceIndicator _indicator;
+    private OtherSlices _otherSlices;
 
     private GameObject _slicePreview;
     private Renderer _slicePreviewFront;
     private Renderer _slicePreviewBack;
-    private Transform sliceHandle;
+    private Transform _sliceHandle;
+    private GameObject _sliceNr;
 
+    private int _snapThreshold;
 
     private bool _movingHandle;
 
@@ -24,6 +27,7 @@ public class SliceHandlePlaceholder : MonoBehaviour {
         _slicer = GameObject.Find("Main").GetComponent<Slicer>();
         _loader = GameObject.Find("Main").GetComponent<SliceLoader>();
         _indicator = transform.parent.GetComponent<SliceIndicator>();
+        _otherSlices = GameObject.Find("Main").GetComponent<OtherSlices>();
 
         _slicePreview = GameObject.Find("SlicePreview");
         _slicePreviewFront = GameObject.Find("SlicePreviewFront").GetComponent<Renderer>();
@@ -31,7 +35,11 @@ public class SliceHandlePlaceholder : MonoBehaviour {
         _slicePreviewFront.material.mainTexture = _slicePreviewBack.material.mainTexture = _loader.GetThumbnail(_slicer.Slice);
         _slicePreview.SetActive(false);
 
-        sliceHandle = GameObject.Find("SliceHandle").transform;
+        _sliceNr = transform.parent.gameObject.GetComponent<SliceIndicator>().sliceNr;
+
+        _sliceHandle = GameObject.Find("SliceHandle").transform;
+
+        _snapThreshold = GameObject.Find("Main").GetComponent<ConfigProperties>().snapThreshold;
 
         _movingHandle = false;
     }
@@ -45,17 +53,31 @@ public class SliceHandlePlaceholder : MonoBehaviour {
         {
             int oldSlice = _indicator.Slice;
 
-            float depth = transform.parent.parent.InverseTransformPoint(sliceHandle.position).z;
+            float depth = transform.parent.parent.InverseTransformPoint(_sliceHandle.position).z;
             _indicator.SetDepth(depth);
 
             int newSlice = _indicator.Slice;
 
-            if(oldSlice != newSlice)
+            // check other users
+
+            int otherSlice = _otherSlices.GetNearestSliceWithUser(newSlice);
+
+            if (otherSlice != -1 && Mathf.Abs(otherSlice - newSlice) < _snapThreshold)
+            {
+                newSlice = otherSlice;
+                _indicator.Slice = newSlice;
+            }
+
+            // load preview
+
+            if (oldSlice != newSlice)
             {
                 _slicePreviewFront.GetComponent<Renderer>().material.mainTexture = 
                     _slicePreviewBack.GetComponent<Renderer>().material.mainTexture =
                     _loader.GetThumbnail(newSlice);
             }
+
+            _sliceNr.GetComponent<TextMesh>().text = "" + newSlice;
         }
         else
         {
@@ -64,7 +86,7 @@ public class SliceHandlePlaceholder : MonoBehaviour {
                 _indicator.Slice = _slicer.Slice;
             }
 
-            sliceHandle.position = transform.position + new Vector3(0, sliceHandle.localScale.y / 2.0f, 0);
+            _sliceHandle.position = transform.position + new Vector3(0, _sliceHandle.localScale.y / 2.0f, 0);
         }
     }
 
@@ -72,12 +94,14 @@ public class SliceHandlePlaceholder : MonoBehaviour {
     {
         _movingHandle = true;
         _slicePreview.SetActive(true);
+        _sliceNr.SetActive(true);
     }
 
     public void EndMoving()
     {
         _movingHandle = false;
         _slicePreview.SetActive(false);
+        _sliceNr.SetActive(false);
 
         _slicer.Slice = _indicator.Slice;
 

@@ -12,7 +12,7 @@ public enum DeviceType
 
 public class Main : MonoBehaviour {
 
-    public int fps = 24;
+    public int tabletFPS = 24;
 
     public DeviceType deviceType;
 
@@ -34,8 +34,6 @@ public class Main : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
-        Application.targetFrameRate = fps;
-
         _slicer = GetComponent<Slicer>();
         _loader = GetComponent<SliceLoader>();
         _config = GetComponent<ConfigProperties>();
@@ -77,6 +75,9 @@ public class Main : MonoBehaviour {
             mainCamera.GetComponent<TouchCamera>().enabled = true;
             resizeOrtographicCamera();
             updateOrtographicCamera();
+
+            // set fps
+            Application.targetFrameRate = tabletFPS;
         }
         else if (deviceType == DeviceType.Desktop)
         {

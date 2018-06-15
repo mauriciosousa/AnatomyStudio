@@ -133,9 +133,9 @@ public class Draw : MonoBehaviour {
     internal void AddLine(string lineID, int slice, string structure, Vector3[] line)
     {
         if (GameObject.Find(lineID) != null) return; 
-
+        
         // create line
-        LineRenderer lr = CreateLine(structure, lineID);
+        LineRenderer lr = CreateLine(structure, lineID, slice);
 
         // add points
         foreach (Vector3 p in line)
@@ -144,7 +144,8 @@ public class Draw : MonoBehaviour {
         }
 
         // update volume (or structure)
-        UpdateVolume(structure);
+        UpdateVolumeLines(structure, slice);
+        UpdateVolume(structure, slice);
     }
 
     private void AbortDrawing()
@@ -154,14 +155,19 @@ public class Draw : MonoBehaviour {
         _drawing = false;
     }
 
+    private void UpdateVolumeLines(string volume, int slice)
+    {
+        if (_main.deviceType == DeviceType.Tablet && disableTabletVolumes) return;
+
+        VolumeLineInfo lines = GameObject.Find(volume + "Lines").GetComponent<VolumeLineInfo>();
+        lines.updateLines(slice);
+    }
+
     private void EndDrawing()
     {
-        string fullLinesName = _currentVolume + "Lines";
-        GameObject parent = GameObject.Find(fullLinesName);
-        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>(); ;
-        lines.updateLines(_slicer.Slice);
+        UpdateVolumeLines(_currentVolume, _slicer.Slice);
 
-        UpdateVolume(_currentVolume);
+        UpdateVolume(_currentVolume, _slicer.Slice);
 
         _drawing = false;
     }
@@ -176,7 +182,7 @@ public class Draw : MonoBehaviour {
 
             if (CheckTolerance(localPoint, localStartingPoint))
             {
-                _currentLine = CreateLine(_currentVolume, GenerateID());
+                _currentLine = CreateLine(_currentVolume, GenerateID(), _slicer.Slice);
 
                 AddPoint(localStartingPoint, _currentLine, _currentVolume);
                 AddPoint(localPoint, _currentLine, _currentVolume);
@@ -209,7 +215,7 @@ public class Draw : MonoBehaviour {
         _drawing = true;
     }
 
-    private LineRenderer CreateLine(string volumeName, string lineID)
+    private LineRenderer CreateLine(string volumeName, string lineID, int slice)
     {
         string fullLinesName = volumeName + "Lines";
 
@@ -222,7 +228,7 @@ public class Draw : MonoBehaviour {
             parent.transform.localPosition = Vector3.zero;
             parent.transform.localRotation = Quaternion.identity;
         }
-        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>(); ;
+        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>();
 
         GameObject go = Instantiate(Resources.Load("Prefabs/Line", typeof(GameObject))) as GameObject;
         go.name = lineID;
@@ -232,20 +238,20 @@ public class Draw : MonoBehaviour {
         go.transform.localRotation = Quaternion.identity;
 
         LineRenderer lr = go.GetComponent<LineRenderer>();
-        lines.addLine(_slicer.Slice, lr);
         lr.material = Resources.Load("Materials/" + _sList.GetMaterialName(volumeName) + "Line", typeof(Material)) as Material;
+
+        lines.addLine(slice, lr);
 
         return lr;
     }
 
-    private void UpdateVolume(string volumeName)
+    private void UpdateVolume(string volumeName, int slice)
     {
         if (_main.deviceType == DeviceType.Tablet && disableTabletVolumes) return;
         if (volumeName == "none") return;
 
-        CreateMesh(volumeName);
+        CreateMesh(volumeName, slice);
     }
-
 
     //Pra fazer tudo virar uma mesh só:
     //- se a mesh atual - numero de triangulos que eu tinha nela, + numero de pontos que eu tenho * 2 menor que 64k, refaço a mesh. Caso contrário tenho que refazer essa e a próxima. 
@@ -326,7 +332,6 @@ public class Draw : MonoBehaviour {
             finalPoints.Add(smallerLine.line.GetPosition(smallerI));
             vertexID++;
 
-
             //not my first edge
             if (edgeID != -1)
             {
@@ -389,7 +394,6 @@ public class Draw : MonoBehaviour {
                     finalTriangles.Add(edgeID - 1);
                 }
             }
-            
 
             smaller.nextPoint(ref smallerI, ref smallerLine, ref smallerInc);
             i++;
@@ -425,7 +429,6 @@ public class Draw : MonoBehaviour {
 
     private void connectLines(Circle alines, Circle blines, int slicea, string volumeName)
     {
-
         GameObject parentVolume = GameObject.Find(volumeName);
         if (parentVolume == null)
         {
@@ -493,8 +496,6 @@ public class Draw : MonoBehaviour {
             int j = 0;
             finalPoints.Add(smallerLine.line.GetPosition(smallerI));
             vertexID++;
-
-
 
             //not my first edge
             if (edgeID != -1)
@@ -591,9 +592,8 @@ public class Draw : MonoBehaviour {
         volume.GetComponent<MeshFilter>().mesh = m;
     }
 
-    private void CreateMesh(string volume)
+    private void CreateMesh(string volume, int slice)
     {
-  
         GameObject go = GameObject.Find(volume + "Lines");
 
         Dictionary<int,Circle> las = go.GetComponent<VolumeLineInfo>().LinesAtSlice;
@@ -604,17 +604,14 @@ public class Draw : MonoBehaviour {
         int i = 0;
         for (; i < keys.Count; i++)
         {
-            if (keys[i] == _slicer.Slice)
+            if (keys[i] == slice)
                 break;
         }
-
-      
-     
-            //if not first slice, connect current slice with the previous one
+        
+        //if not first slice, connect current slice with the previous one
         if(i != 0)
         {
             connectLinesNotAll(las[keys[i]], las[keys[i - 1]],keys[i],volume);
-
         }
 
         //if not last slice, connect next slice with me 
@@ -745,17 +742,14 @@ public class Draw : MonoBehaviour {
 
     public void RemoveLine(GameObject gameObject)
     {
-        string fullLinesName = _currentVolume + "Lines";
-        GameObject parent = GameObject.Find(fullLinesName);
-        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>(); ;
-        lines.removeLine(gameObject.GetComponent<LineRenderer>(), _slicer.Slice);
-        lines.updateLines(_slicer.Slice);
+        /*VolumeLineInfo lines = GameObject.Find(MERDA_currentVolume + "Lines").GetComponent<VolumeLineInfo>(); ;
+        lines.removeLine(gameObject.GetComponent<LineRenderer>(), MERDA_slicer.Slice);
+        lines.updateLines(MERDA_slicer.Slice);
 
         string volume = gameObject.transform.parent.gameObject.name.Replace("Lines", "");
         gameObject.SetActive(false);
         Destroy(gameObject);
-
    
-        UpdateVolume(volume);
+        UpdateVolume(volume);*/
     }
 }

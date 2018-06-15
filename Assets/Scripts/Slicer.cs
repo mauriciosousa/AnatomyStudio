@@ -5,7 +5,6 @@ using UnityEngine;
 
 public class Slicer : MonoBehaviour
 {
-    private Main _main;
     private ASSNetwork _assnetwork;
     private SliceLoader _loader;
     private OtherSlices _otherSlices;
@@ -73,7 +72,6 @@ public class Slicer : MonoBehaviour
     // Use this for initialization
     void Start ()
     {
-        _main = GetComponent<Main>();
         _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
         _loader = GetComponent<SliceLoader>();
         _otherSlices = GetComponent<OtherSlices>();

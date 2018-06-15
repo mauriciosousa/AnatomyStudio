@@ -13,9 +13,6 @@ public class OtherSlices : MonoBehaviour
         _slices = new Dictionary<string, int>();
 
         _tabletop = GameObject.Find("Tabletop").transform;
-
-        // testing purposes
-        _slices["ZeZe"] = 2;
     }
 	
 	void Update ()
@@ -34,6 +31,7 @@ public class OtherSlices : MonoBehaviour
             sliceIndicator = Instantiate(Resources.Load("Prefabs/SliceIndicator", typeof(GameObject))) as GameObject;
             sliceIndicator.name = userID;
             sliceIndicator.transform.Find("UserName").gameObject.GetComponent<TextMesh>().text = "| " + userID;
+            sliceIndicator.transform.Find("UserName").gameObject.SetActive(true);
             sliceIndicator.transform.parent = _tabletop;
             sliceIndicator.transform.localPosition = Vector3.zero;
             sliceIndicator.transform.localEulerAngles = new Vector3(0, -90, 0);
@@ -52,5 +50,24 @@ public class OtherSlices : MonoBehaviour
                 return p.Key;
         }
         return "";
+    }
+
+    public int GetNearestSliceWithUser(int slice)
+    {
+        int minDiff = int.MaxValue;
+        int retSlice = -1;
+
+        foreach (int i in _slices.Values)
+        {
+            int diff = Mathf.Abs(i - slice);
+
+            if (diff < minDiff)
+            {
+                minDiff = diff;
+                retSlice = i;
+            }
+        }
+
+        return retSlice;
     }
 }

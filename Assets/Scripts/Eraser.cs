@@ -109,8 +109,6 @@ public class Eraser : MonoBehaviour {
                                         // check if same slice
                                         if (Mathf.RoundToInt(localMouseA.z / _loader.SliceDepth) != Mathf.RoundToInt(points[i].z / _loader.SliceDepth))
                                         {
-                                            print("mouse: " + localMouseA.z);
-                                            print("point: " + points[i].z);
                                             break;
                                         }
 

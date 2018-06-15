@@ -93,6 +93,7 @@ public class Storage : MonoBehaviour {
                 Directory.CreateDirectory(fileInfo.Directory.FullName);
 
             Debug.Log("Writing to " + _fileName);
+            dataLines.Insert(0, "Saved:" + System.DateTime.Now);
             File.WriteAllLines(_fileName, dataLines.ToArray(), Encoding.UTF8);
         }
     }
@@ -105,7 +106,10 @@ public class Storage : MonoBehaviour {
             {
                 string[] values = line.Split(separator);
 
+                if (values.Length < 9) continue; // 9 = structure + line id + slice + 2 points * (x, y, z)
+
                 string structureName = values[0];
+
                 string lineID = values[1];
                 int slice = int.Parse(values[2]);
 

@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-
 public enum ConnectPoint
 {
     first, last
 }
-
 
 public class Circle
 {
@@ -16,7 +14,6 @@ public class Circle
         lines = new List<LineInfo>();
     }
 
-   
     public List<LineInfo> lines;
     public int lineStartID;
     public int pointStartID;
@@ -36,7 +33,8 @@ public class Circle
             id = linein.PrevLinePoint == ConnectPoint.first ? 0 : linein.PrevLine.line.positionCount-1;
             inc = id == 0 ? 1 : -1;
             linein = linein.PrevLine;
-        }else
+        }
+        else
         {
             id += inc;
         }
@@ -72,7 +70,6 @@ public class LineInfo
     public ConnectPoint PrevLinePoint;
 }
 
-
 public class VolumeLineInfo : MonoBehaviour {
 
 	// Use this for initialization
@@ -90,11 +87,9 @@ public class VolumeLineInfo : MonoBehaviour {
             _linesAtSlice = value;
         }
     }
-
  
     public void updateLines(int slice)
     {
-
         if(_linesAtSlice[slice].lines.Count == 0)
         {
             return;
@@ -129,7 +124,7 @@ public class VolumeLineInfo : MonoBehaviour {
                     cp = ConnectPoint.last;
                 }
             }
-          
+
             lr.NextLine = minLine;
             lr.NextLinePoint = cp;
 
@@ -160,11 +155,9 @@ public class VolumeLineInfo : MonoBehaviour {
             lr.PrevLinePoint = cp;
         }
 
-
         float maxY = float.MinValue;
         float maxX = float.MinValue;
         float minY = float.MaxValue;
-
 
         LineInfo linea = _linesAtSlice[slice].lines[0];
         List < LineInfo > checkedLines = new List<LineInfo>();
@@ -172,10 +165,11 @@ public class VolumeLineInfo : MonoBehaviour {
         int i = 0;
         int inc = 1;
         int count = 0;
+
         //find maxes and mins
         while (checkedLines.Count < _linesAtSlice[slice].lines.Count)
         {
-           
+
             for (; i < linea.line.positionCount; i += inc)
             {
                if(linea.line.GetPosition(i).x > maxX)
@@ -193,6 +187,7 @@ public class VolumeLineInfo : MonoBehaviour {
                     minY = linea.line.GetPosition(i).y;
                 }
             }
+
             checkedLines.Add(linea);
             count += linea.line.positionCount;
             i = linea.NextLinePoint == ConnectPoint.first ? 0 : linea.NextLine.line.positionCount - 1;
@@ -202,7 +197,6 @@ public class VolumeLineInfo : MonoBehaviour {
             if (checkedLines.Contains(linea)) break;
         }
         _linesAtSlice[slice].pointCount = count;
-
 
         //find maxes and mins
         int maxI = 0;
@@ -248,8 +242,6 @@ public class VolumeLineInfo : MonoBehaviour {
             if (checkedLines.Contains(linea)) break;
         }
 
-
-
         _linesAtSlice[slice].lineStartID =  _linesAtSlice[slice].lines.IndexOf(maxLine);
         _linesAtSlice[slice].pointStartID = maxI;
 
@@ -282,7 +274,6 @@ public class VolumeLineInfo : MonoBehaviour {
         {
             _linesAtSlice[slice].directionClockwise = -1;
         }
-
     }
 
     public void removeLine(LineRenderer line, int slice)
@@ -298,14 +289,9 @@ public class VolumeLineInfo : MonoBehaviour {
         if (!_linesAtSlice.ContainsKey(slice))
         {
             _linesAtSlice.Add(slice, new Circle());
-       
         }
 
         LineInfo li2 = new LineInfo(line);
         _linesAtSlice[slice].lines.Add(li2);
-
-  
     }
-
-    
 }

@@ -104,6 +104,14 @@ public class ConfigProperties : MonoBehaviour {
         }
     }
 
+    public int snapThreshold
+    {
+        get
+        {
+            return int.Parse(_load("snap.threshold"));
+        }
+    }
+
     private string _load(string property)
     {
         if (File.Exists(configFilenameFullPath))
@@ -113,7 +121,7 @@ public class ConfigProperties : MonoBehaviour {
             {
                 if (line.Split('=')[0] == property)
                 {
-                    Debug.Log("Found: " + property + " - " + line.Split('=')[1]);
+                    //Debug.Log("Found: " + property + " - " + line.Split('=')[1]);
                     return line.Split('=')[1];
                 }
             }
