@@ -110,7 +110,7 @@ public class Draw : MonoBehaviour {
             if (Drawing && Input.touchCount > 1)
                 AbortDrawing();
 
-            // test Abort drawing
+            /*// test Abort drawing
             if (Input.GetKeyDown(KeyCode.A))
             {
                 if (Drawing)
@@ -121,7 +121,7 @@ public class Draw : MonoBehaviour {
             if(Input.GetKeyDown(KeyCode.D))
             {
                 _enabled = !_enabled;
-            }
+            }*/
         }
     }
 
@@ -166,7 +166,6 @@ public class Draw : MonoBehaviour {
     private void EndDrawing()
     {
         UpdateVolumeLines(_currentVolume, _slicer.Slice);
-
         UpdateVolume(_currentVolume, _slicer.Slice);
 
         _drawing = false;

@@ -1,5 +1,5 @@
 device.type=Tablet
-peer.type=client
+peer.type=server
 user.ID=Lenon
 server.address=127.0.0.1
 server.port=5000

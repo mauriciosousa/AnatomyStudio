@@ -170,7 +170,7 @@ public class VolumeLineInfo : MonoBehaviour {
         while (checkedLines.Count < _linesAtSlice[slice].lines.Count)
         {
 
-            for (; i < linea.line.positionCount; i += inc)
+            for (; i < linea.line.positionCount && i >= 0; i += inc)
             {
                if(linea.line.GetPosition(i).x > maxX)
                 {
@@ -205,9 +205,11 @@ public class VolumeLineInfo : MonoBehaviour {
         maxLine = null;
         float minDist = float.MaxValue;
         float maxDist = float.MaxValue;
+        
         checkedLines.Clear();
 
         linea = _linesAtSlice[slice].lines[0];
+
 
         Vector3 bbTop = new Vector3(maxX, maxY, thisSliceZ);
         Vector3 bbBot = new Vector3(maxX, minY, thisSliceZ);
@@ -215,7 +217,7 @@ public class VolumeLineInfo : MonoBehaviour {
         while (checkedLines.Count < _linesAtSlice[slice].lines.Count)
         {
 
-            for (; i < linea.line.positionCount; i += inc)
+            for (; i < linea.line.positionCount && i >= 0; i += inc)
             {
                 //point closest to bbTop
                 if ((linea.line.GetPosition(i) - bbTop).sqrMagnitude < maxDist )
