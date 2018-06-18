@@ -170,11 +170,14 @@ public class Draw : MonoBehaviour {
 
     private void EndDrawing()
     {
-        VolumeLineInfo lines = _currentLine.transform.parent.gameObject.GetComponent<VolumeLineInfo>();
-        lines.addLine(_slicer.Slice, _currentLine);
+        if (_currentLine != null)
+        {
+            VolumeLineInfo lines = _currentLine.transform.parent.gameObject.GetComponent<VolumeLineInfo>();
+            lines.addLine(_slicer.Slice, _currentLine);
 
-        UpdateVolumeLines(_currentVolume, _slicer.Slice);
-        UpdateVolume(_currentVolume, _slicer.Slice);
+            UpdateVolumeLines(_currentVolume, _slicer.Slice);
+            UpdateVolume(_currentVolume, _slicer.Slice);
+        }
 
         _drawing = false;
     }

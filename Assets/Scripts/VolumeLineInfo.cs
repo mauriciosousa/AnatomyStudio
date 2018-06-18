@@ -98,8 +98,97 @@ public class VolumeLineInfo : MonoBehaviour {
         LineInfo maxLine = null;
         LineInfo minLine = null;
         float thisSliceZ = 0;
-        foreach (LineInfo lr in _linesAtSlice[slice].lines)
+
+        // begin cenas DM
+
+        List<LineInfo> usedLines = new List<LineInfo>();
+
+        LineInfo firstLine = _linesAtSlice[slice].lines[0];
+        ConnectPoint firstCP = ConnectPoint.first;
+        LineInfo currentLine = firstLine;
+        ConnectPoint currentCP = ConnectPoint.last;
+        LineInfo lastLine;
+        ConnectPoint lastCP;
+
+        while (currentLine != null)
         {
+            usedLines.Add(currentLine);
+
+            Vector3 point = currentLine.line.GetPosition(currentCP == ConnectPoint.first? 0 : currentLine.line.positionCount - 1);
+
+            float mindist = float.MaxValue;
+            minLine = null;
+            ConnectPoint cp = ConnectPoint.first;
+
+            foreach(LineInfo li in _linesAtSlice[slice].lines)
+            {
+                if (usedLines.Contains(li)) continue;
+
+                float dist0 = (li.line.GetPosition(0) - point).magnitude;
+                float distn = (li.line.GetPosition(li.line.positionCount - 1) - point).magnitude;
+                if (dist0 < mindist)
+                {
+                    mindist = dist0;
+                    minLine = li;
+                    cp = ConnectPoint.first;
+                }
+                if (distn < mindist)
+                {
+                    mindist = distn;
+                    minLine = li;
+                    cp = ConnectPoint.last;
+                }
+            }
+
+            lastLine = currentLine;
+            lastCP = currentCP;
+
+            if (minLine == null)
+            {
+                currentLine = firstLine;
+                currentCP = firstCP;
+            }
+            else
+            {
+                currentLine = minLine;
+                currentCP = cp;
+            }
+
+            // perform connection
+
+            if (lastCP == ConnectPoint.last)
+            {
+                lastLine.NextLine = currentLine;
+                lastLine.NextLinePoint = currentCP;
+            }
+            else
+            {
+                lastLine.PrevLine = currentLine;
+                lastLine.PrevLinePoint = currentCP;
+            }
+
+            if (currentCP == ConnectPoint.last)
+            {
+                currentLine.NextLine = lastLine;
+                currentLine.NextLinePoint = lastCP;
+            }
+            else
+            {
+                currentLine.PrevLine = lastLine;
+                currentLine.PrevLinePoint = lastCP;
+            }
+
+            // just to break cycle :P
+
+            currentLine = minLine;
+            currentCP = currentCP == ConnectPoint.first ? ConnectPoint.last : ConnectPoint.first;
+        }
+
+        // end cenas DM
+
+        /*foreach (LineInfo lr in _linesAtSlice[slice].lines)
+        {
+
             Vector3 lastPoint = lr.line.GetPosition(lr.line.positionCount - 1);
             float mindist = float.MaxValue;
             minLine = lr;
@@ -153,7 +242,7 @@ public class VolumeLineInfo : MonoBehaviour {
             }
             lr.PrevLine = minLine;
             lr.PrevLinePoint = cp;
-        }
+        }*/
 
         float maxY = float.MinValue;
         float maxX = float.MinValue;
