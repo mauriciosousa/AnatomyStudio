@@ -8,6 +8,7 @@ public class Draw : MonoBehaviour {
 
     private LineRenderer _currentLine;
     private Slicer _slicer;
+    private SliceLoader _loader;
     private StructuresList _sList;
 
     private string _currentVolume;
@@ -53,6 +54,7 @@ public class Draw : MonoBehaviour {
         _assnetwork = GameObject.Find("Network").GetComponent<ASSNetwork>();
 
         _slicer = GetComponent<Slicer>();
+        _loader = GetComponent<SliceLoader>();
         _sList = GetComponent<StructuresList>();
         _currentVolume = "none";
         _drawing = false;
@@ -110,7 +112,7 @@ public class Draw : MonoBehaviour {
             if (Drawing && Input.touchCount > 1)
                 AbortDrawing();
 
-            /*// test Abort drawing
+            // test Abort drawing
             if (Input.GetKeyDown(KeyCode.A))
             {
                 if (Drawing)
@@ -121,7 +123,7 @@ public class Draw : MonoBehaviour {
             if(Input.GetKeyDown(KeyCode.D))
             {
                 _enabled = !_enabled;
-            }*/
+            }
         }
     }
 
@@ -142,6 +144,9 @@ public class Draw : MonoBehaviour {
         {
             AddPoint(p, lr, structure);
         }
+
+        VolumeLineInfo lines = lr.transform.parent.gameObject.GetComponent<VolumeLineInfo>();
+        lines.addLine(slice, lr);
 
         // update volume (or structure)
         UpdateVolumeLines(structure, slice);
@@ -165,6 +170,9 @@ public class Draw : MonoBehaviour {
 
     private void EndDrawing()
     {
+        VolumeLineInfo lines = _currentLine.transform.parent.gameObject.GetComponent<VolumeLineInfo>();
+        lines.addLine(_slicer.Slice, _currentLine);
+
         UpdateVolumeLines(_currentVolume, _slicer.Slice);
         UpdateVolume(_currentVolume, _slicer.Slice);
 
@@ -227,7 +235,6 @@ public class Draw : MonoBehaviour {
             parent.transform.localPosition = Vector3.zero;
             parent.transform.localRotation = Quaternion.identity;
         }
-        VolumeLineInfo lines = parent.GetComponent<VolumeLineInfo>();
 
         GameObject go = Instantiate(Resources.Load("Prefabs/Line", typeof(GameObject))) as GameObject;
         go.name = lineID;
@@ -238,8 +245,6 @@ public class Draw : MonoBehaviour {
 
         LineRenderer lr = go.GetComponent<LineRenderer>();
         lr.material = Resources.Load("Materials/" + _sList.GetMaterialName(volumeName) + "Line", typeof(Material)) as Material;
-
-        lines.addLine(slice, lr);
 
         return lr;
     }
@@ -741,14 +746,18 @@ public class Draw : MonoBehaviour {
 
     public void RemoveLine(GameObject gameObject)
     {
-        /*VolumeLineInfo lines = GameObject.Find(MERDA_currentVolume + "Lines").GetComponent<VolumeLineInfo>(); ;
-        lines.removeLine(gameObject.GetComponent<LineRenderer>(), MERDA_slicer.Slice);
-        lines.updateLines(MERDA_slicer.Slice);
+        LineRenderer lr = gameObject.GetComponent<LineRenderer>();
 
         string volume = gameObject.transform.parent.gameObject.name.Replace("Lines", "");
+        int slice = Mathf.RoundToInt(lr.GetPosition(0).z / _loader.SliceDepth) + 1;
+
+        VolumeLineInfo lines = gameObject.transform.parent.gameObject.GetComponent<VolumeLineInfo>(); ;
+        lines.removeLine(lr, slice);
+        lines.updateLines(slice);
+
         gameObject.SetActive(false);
         Destroy(gameObject);
    
-        UpdateVolume(volume);*/
+        UpdateVolume(volume, slice);
     }
 }

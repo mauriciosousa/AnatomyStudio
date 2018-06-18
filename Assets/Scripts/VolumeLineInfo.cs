@@ -87,10 +87,10 @@ public class VolumeLineInfo : MonoBehaviour {
             _linesAtSlice = value;
         }
     }
- 
+
     public void updateLines(int slice)
     {
-        if(_linesAtSlice[slice].lines.Count == 0)
+        if (_linesAtSlice[slice].lines.Count == 0)
         {
             return;
         }
@@ -160,7 +160,7 @@ public class VolumeLineInfo : MonoBehaviour {
         float minY = float.MaxValue;
 
         LineInfo linea = _linesAtSlice[slice].lines[0];
-        List < LineInfo > checkedLines = new List<LineInfo>();
+        List<LineInfo> checkedLines = new List<LineInfo>();
 
         int i = 0;
         int inc = 1;
@@ -172,12 +172,12 @@ public class VolumeLineInfo : MonoBehaviour {
 
             for (; i < linea.line.positionCount && i >= 0; i += inc)
             {
-               if(linea.line.GetPosition(i).x > maxX)
+                if (linea.line.GetPosition(i).x > maxX)
                 {
                     maxX = linea.line.GetPosition(i).x;
                     thisSliceZ = linea.line.GetPosition(i).z;
                 }
-          
+
                 if (linea.line.GetPosition(i).y > maxY)
                 {
                     maxY = linea.line.GetPosition(i).y;
@@ -190,12 +190,25 @@ public class VolumeLineInfo : MonoBehaviour {
 
             checkedLines.Add(linea);
             count += linea.line.positionCount;
-            i = linea.NextLinePoint == ConnectPoint.first ? 0 : linea.NextLine.line.positionCount - 1;
-            inc = linea.NextLinePoint == ConnectPoint.first ? 1 : -1;
-            linea = linea.NextLine;
+            //go to prev line
+            if (i == 0)
+            {
+                i = linea.PrevLinePoint == ConnectPoint.first ? 0 : linea.PrevLine.line.positionCount - 1;
+                inc = linea.PrevLinePoint == ConnectPoint.first ? 1 : -1;
+                linea = linea.PrevLine;
+            }
+            //go to next line
+            else
+            {
+                i = linea.NextLinePoint == ConnectPoint.first ? 0 : linea.NextLine.line.positionCount - 1;
+                inc = linea.NextLinePoint == ConnectPoint.first ? 1 : -1;
+                linea = linea.NextLine;
+            }
+
             //if closed circle
             if (checkedLines.Contains(linea)) break;
         }
+
         _linesAtSlice[slice].pointCount = count;
 
         //find maxes and mins
@@ -205,70 +218,63 @@ public class VolumeLineInfo : MonoBehaviour {
         maxLine = null;
         float minDist = float.MaxValue;
         float maxDist = float.MaxValue;
-        
-        checkedLines.Clear();
 
         linea = _linesAtSlice[slice].lines[0];
-
-
+        i = 0;
+        inc = 1;
         Vector3 bbTop = new Vector3(maxX, maxY, thisSliceZ);
         Vector3 bbBot = new Vector3(maxX, minY, thisSliceZ);
-        
-        while (checkedLines.Count < _linesAtSlice[slice].lines.Count)
+
+        int j = 0;
+        while (j < count)
         {
-
-            for (; i < linea.line.positionCount && i >= 0; i += inc)
+            //point closest to bbTop
+            if ((linea.line.GetPosition(i) - bbTop).sqrMagnitude < maxDist)
             {
-                //point closest to bbTop
-                if ((linea.line.GetPosition(i) - bbTop).sqrMagnitude < maxDist )
-                {
-                    maxLine = linea;
-                    maxI = i;
-                    maxDist = (linea.line.GetPosition(i) - bbTop).sqrMagnitude;
-                }
-                //point closest to 
-                if ((linea.line.GetPosition(i) - bbBot).sqrMagnitude < minDist)
-                {
-                    minLine = linea;
-                    minI = i;
-                    minDist = (linea.line.GetPosition(i) - bbBot).sqrMagnitude;
-                }
-
+                maxLine = linea;
+                maxI = i;
+                maxDist = (linea.line.GetPosition(i) - bbTop).sqrMagnitude;
             }
-            checkedLines.Add(linea);
-            count += linea.line.positionCount;
-            i = linea.NextLinePoint == ConnectPoint.first ? 0 : linea.NextLine.line.positionCount - 1;
-            inc = linea.NextLinePoint == ConnectPoint.first ? 1 : -1;
-            linea = linea.NextLine;
-            //if closed circle
-            if (checkedLines.Contains(linea)) break;
+            //point closest to bbBottom
+            if ((linea.line.GetPosition(i) - bbBot).sqrMagnitude < minDist)
+            {
+                minLine = linea;
+                minI = i;
+                minDist = (linea.line.GetPosition(i) - bbBot).sqrMagnitude;
+            }
+
+            _linesAtSlice[slice].nextPoint(ref i, ref linea, ref inc);
+            j++;
         }
 
-        _linesAtSlice[slice].lineStartID =  _linesAtSlice[slice].lines.IndexOf(maxLine);
+        _linesAtSlice[slice].lineStartID = _linesAtSlice[slice].lines.IndexOf(maxLine);
         _linesAtSlice[slice].pointStartID = maxI;
 
-        //find direction from maxY to maxY (clockwise?)
         int forwardSum = 0;
-        LineInfo temp = maxLine;
-        while(temp != minLine)
+        i = maxI;
+        inc = +1;
+        linea = maxLine;
+        j = 0;
+        while (j < count && !(linea == minLine && i == minI))
         {
-            forwardSum += temp.NextLine.line.positionCount - maxI;
-            maxI = 0;
-            temp = temp.NextLine;
+            forwardSum++;
+            _linesAtSlice[slice].nextPoint(ref i, ref linea, ref inc);
+            j++;
         }
-        forwardSum += minI;
 
         int backSum = 0;
-        temp = maxLine;
-        while (temp != minLine)
-        {
-            backSum +=  maxI;
-            temp = temp.NextLine;
-            maxI = temp.NextLine.line.positionCount;
-        }
-        backSum += maxI - minI;
+        i = maxI;
+        inc = -1;
+        linea = maxLine;
+        j = 0;
 
-        if(forwardSum > backSum)
+        while (j < count && !(linea == minLine && i == minI))
+        {
+            backSum++;
+            _linesAtSlice[slice].nextPoint(ref i, ref linea, ref inc);
+        }
+
+        if (forwardSum > backSum)
         {
             _linesAtSlice[slice].directionClockwise = 1;
         }
