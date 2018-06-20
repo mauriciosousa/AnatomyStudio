@@ -1,35 +1,6 @@
-Stomach:Organ
-Bone:Bone
-Muscle:Muscle
-Liver:Organ
-Fat:Fat
-Teeth:Teeth
-Lung:Organ
-Stomach:Organ
-Bone:Bone
-Muscle:Muscle
-Liver:Organ
-Fat:Fat
-Teeth:Teeth
-Lung:Organ
-Stomach:Organ
-Bone:Bone
-Muscle:Muscle
-Liver:Organ
-Fat:Fat
-Teeth:Teeth
-Lung:Organ
-Stomach:Organ
-Bone:Bone
-Muscle:Muscle
-Liver:Organ
-Fat:Fat
-Teeth:Teeth
-Lung:Organ
-Stomach:Organ
-Bone:Bone
-Muscle:Muscle
-Liver:Organ
-Fat:Fat
-Teeth:Teeth
-Lung:Organ
+Left Kidney:Organ
+Right Kidney:Organ
+Left Humerus:Bone
+Right Humerus:Bone
+Left Femoral Head:Bone
+Right Femoral Head:Bone

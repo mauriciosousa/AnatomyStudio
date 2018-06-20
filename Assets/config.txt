@@ -1,4 +1,4 @@
-device.type=Tablet
+device.type=Meta
 peer.type=server
 user.ID=Lenon
 server.address=127.0.0.1

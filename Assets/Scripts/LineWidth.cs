@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class LineWidth : MonoBehaviour {
 
+    public static bool enabled = true;
+
     private Main _main;
 
     private LineRenderer _lineRenderer;
@@ -24,6 +26,9 @@ public class LineWidth : MonoBehaviour {
 	void Update ()
     {
         SetWidth();
+
+        if(_main.deviceType == DeviceType.Meta)
+            GetComponent<LineRenderer>().enabled = enabled;
     }
 
     private void SetWidth()

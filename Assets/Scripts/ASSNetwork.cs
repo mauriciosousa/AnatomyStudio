@@ -40,7 +40,7 @@ public class ASSNetwork : MonoBehaviour {
 
         if (peerType == ASSPeerType.server)
         {
-            Network.InitializeServer(2, port, false);
+            Network.InitializeServer(16, port, false);
         }
         else
         {

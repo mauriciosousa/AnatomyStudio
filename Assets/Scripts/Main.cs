@@ -108,6 +108,11 @@ public class Main : MonoBehaviour {
                 _translationHandle.SetActive(!_translationHandle.activeSelf);
                 _rotationHandle.SetActive(!_rotationHandle.activeSelf);
             }
+
+            if(Input.GetKeyDown(KeyCode.L))
+            {
+                LineWidth.enabled = !LineWidth.enabled;
+            }
         }
     }
 
